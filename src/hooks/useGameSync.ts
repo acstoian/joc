@@ -80,6 +80,9 @@ export function useGameSync(
   const [participantCount, setParticipantCount] = useState(0);
 
   useEffect(() => {
+    const sb = supabaseRef.current;
+    let cancelled = false;
+
     // fetchState is defined inside the effect so it closes over the current
     // gameId/playerId values without needing to be in the dependency list.
     // The function is safe to call multiple times (idempotent read).
@@ -92,81 +95,6 @@ export function useGameSync(
         setState(data);
       }
     };
-
-    // ----------------------------------------------------------------
-    // Channel setup — created once per [gameId, playerId] pair.
-    // Do NOT move any of the .on() / .subscribe() calls outside this
-    // effect — creating the channel in the render body causes a new
-    // channel to be created on every render (Pitfall: channel in render body).
-    //
-    // Read supabaseRef.current inside the effect so the ref itself is the
-    // captured value (refs are stable objects; .current is the value we want).
-    // ----------------------------------------------------------------
-    const sb = supabaseRef.current;
-    const channel = sb
-      .channel(`game:${gameId}`)
-
-      // BROADCAST: each GAME_EVENT is a typed signal that data has changed.
-      // Re-fetch from the DB for authoritative state — NEVER read game data
-      // off the event payload (D-06, T-02-05 — forged/replayed broadcasts
-      // cannot corrupt displayed state when the DB is always the source).
-      .on("broadcast", { event: "GAME_EVENT" }, async ({ payload }) => {
-        // Type assertion gives exhaustiveness checking in Phase 3+ when the
-        // union is extended; the payload itself is ignored for data purposes.
-        const _event = payload as GameEvent;
-        void _event; // signal "intentionally unused" — event type drives future animation
-        await fetchState();
-      })
-
-      // PRESENCE: derive participantCount from presenceState() on every sync.
-      // Registered BEFORE .subscribe() so the handler is in place before the
-      // first "sync" fires (presence sync fires immediately after SUBSCRIBED).
-      .on("presence", { event: "sync" }, () => {
-        const presence = channel.presenceState();
-        setParticipantCount(Object.keys(presence).length);
-      })
-
-      // SUBSCRIBE callback — handles all REALTIME_SUBSCRIBE_STATES values.
-      // [VERIFIED: @supabase/realtime-js@2.106.2 REALTIME_SUBSCRIBE_STATES enum]
-      //   "SUBSCRIBED"    → connected (initial + every reconnect)
-      //   "CHANNEL_ERROR" → transient error; SDK auto-reconnects
-      //   "TIMED_OUT"     → heartbeat missed; SDK auto-reconnects
-      //   "CLOSED"        → channel explicitly removed or fatal error
-      .subscribe(async (subscribeStatus) => {
-        if (subscribeStatus === "SUBSCRIBED") {
-          setStatus("connected");
-
-          // subscribe-then-fetch (RT-03): fetch authoritative state NOW, before
-          // processing any queued events. This is the reconnect resync path —
-          // it runs on initial connect AND on every SDK auto-reconnect.
-          await fetchState();
-
-          // PRESENCE TRACK — exactly once per (re)connection (D-04, D-09).
-          // Must be in the SUBSCRIBED branch only, never in:
-          //   - broadcast handler (floods presence at 100+ clients, T-02-07)
-          //   - render loop / dependency-array trap
-          //   - visibilitychange handler
-          //
-          // Phase 3 (JOIN-02/03) replaces this stub identity with the real
-          // display_name from the player's join flow.
-          const deviceToken =
-            typeof window !== "undefined"
-              ? (localStorage.getItem("device_token") ?? "stub-token")
-              : "stub-token";
-          await channel.track({ player_id: playerId, device_token: deviceToken });
-        } else if (
-          subscribeStatus === "CHANNEL_ERROR" ||
-          subscribeStatus === "TIMED_OUT"
-        ) {
-          // Transient failure — SDK will auto-reconnect and re-fire SUBSCRIBED,
-          // which triggers fetchState() again. No manual re-subscribe needed.
-          setStatus("reconnecting");
-        } else if (subscribeStatus === "CLOSED") {
-          setStatus("error");
-        }
-      });
-
-    channelRef.current = channel;
 
     // ----------------------------------------------------------------
     // VISIBILITYCHANGE — re-fetch state when tab returns to foreground.
@@ -185,22 +113,155 @@ export function useGameSync(
         await fetchState();
       }
     };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // ----------------------------------------------------------------
+    // STRICTMODE-SAFE ASYNC SETUP (Pitfall 2)
+    //
+    // React 19 StrictMode fires the effect, then immediately unmounts and
+    // remounts. The cleanup calls sb.removeChannel(channel), which sets the
+    // channel's underlying Phoenix state to "leaving" synchronously — but the
+    // channel remains in the SDK's registry (this.channels) until the server
+    // acknowledges the leave (async). On the second mount, sb.channel(topic)
+    // finds the leaving/joined channel in the registry and RETURNS IT instead
+    // of creating a fresh one. Calling .on("presence", ...) on an
+    // already-joined/joining channel throws.
+    //
+    // Fix: at setup start, if our own previous channel (tracked by
+    // channelRef.current) is still in the registry, await its full removal
+    // before creating a new one. Using `cancelled` guard ensures that if the
+    // component unmounts again before setup completes, we do not proceed.
+    // ----------------------------------------------------------------
+    async function setup() {
+      // ---- StrictMode guard -------------------------------------------------
+      // If our previous channel is still registered (e.g. StrictMode re-mount
+      // before the async removeChannel Promise resolved), wait for it to clear.
+      // We only remove the channel we own (channelRef.current) — never touching
+      // channels created by sibling hook instances using the same topic.
+      const prev = channelRef.current;
+      if (prev !== null && sb.getChannels().some((c) => c === prev)) {
+        await sb.removeChannel(prev);
+        channelRef.current = null;
+      }
+
+      // Bail out if the component was unmounted while we were awaiting above.
+      if (cancelled) return;
+
+      // ----------------------------------------------------------------
+      // Channel setup — created once per [gameId, playerId] pair.
+      //
+      // BROADCAST is registered first (no SDK guard for broadcast type).
+      //
+      // PRESENCE is registered in a try/catch. The SDK throws
+      // "cannot add `presence` callbacks … after `subscribe()`" when the
+      // channel returned by sb.channel() is already in joined/joining state —
+      // which happens when a sibling hook on the same page (same singleton
+      // client) has already subscribed to this topic (SDK deduplicates by
+      // topic). In that case we fall back to a one-shot read of presenceState()
+      // and skip the redundant subscribe() call (Pitfall 2 + shared-channel).
+      // ----------------------------------------------------------------
+      const channel = sb
+        .channel(`game:${gameId}`)
+
+        // BROADCAST: each GAME_EVENT is a typed signal that data has changed.
+        // Re-fetch from the DB for authoritative state — NEVER read game data
+        // off the event payload (D-06, T-02-05 — forged/replayed broadcasts
+        // cannot corrupt displayed state when the DB is always the source).
+        .on("broadcast", { event: "GAME_EVENT" }, async ({ payload }) => {
+          // Type assertion gives exhaustiveness checking in Phase 3+ when the
+          // union is extended; the payload itself is ignored for data purposes.
+          const _event = payload as GameEvent;
+          void _event; // signal "intentionally unused" — event type drives future animation
+          await fetchState();
+        });
+
+      // PRESENCE: try to register sync listener and subscribe.
+      // This succeeds on a fresh channel (closed state). It throws on a channel
+      // already in joined/joining state (shared via SDK dedup). In the shared
+      // case we read presenceState() once and skip subscribe() — the sibling
+      // instance that owns the channel drives future presence updates.
+      try {
+        channel
+          // Registered BEFORE .subscribe() so the handler is in place before
+          // the first "sync" fires (presence sync fires immediately after SUBSCRIBED).
+          .on("presence", { event: "sync" }, () => {
+            const presence = channel.presenceState();
+            setParticipantCount(Object.keys(presence).length);
+          })
+
+          // SUBSCRIBE callback — handles all REALTIME_SUBSCRIBE_STATES values.
+          // [VERIFIED: @supabase/realtime-js@2.106.2 REALTIME_SUBSCRIBE_STATES enum]
+          //   "SUBSCRIBED"    → connected (initial + every reconnect)
+          //   "CHANNEL_ERROR" → transient error; SDK auto-reconnects
+          //   "TIMED_OUT"     → heartbeat missed; SDK auto-reconnects
+          //   "CLOSED"        → channel explicitly removed or fatal error
+          .subscribe(async (subscribeStatus) => {
+            if (subscribeStatus === "SUBSCRIBED") {
+              setStatus("connected");
+
+              // subscribe-then-fetch (RT-03): fetch authoritative state NOW,
+              // before processing any queued events. This is the reconnect
+              // resync path — runs on initial connect AND every SDK reconnect.
+              await fetchState();
+
+              // PRESENCE TRACK — exactly once per (re)connection (D-04, D-09).
+              // Must be in the SUBSCRIBED branch only, never in:
+              //   - broadcast handler (floods presence at 100+ clients, T-02-07)
+              //   - render loop / dependency-array trap
+              //   - visibilitychange handler
+              //
+              // Phase 3 (JOIN-02/03) replaces this stub identity with the real
+              // display_name from the player's join flow.
+              const deviceToken =
+                typeof window !== "undefined"
+                  ? (localStorage.getItem("device_token") ?? "stub-token")
+                  : "stub-token";
+              await channel.track({ player_id: playerId, device_token: deviceToken });
+            } else if (
+              subscribeStatus === "CHANNEL_ERROR" ||
+              subscribeStatus === "TIMED_OUT"
+            ) {
+              // Transient failure — SDK will auto-reconnect and re-fire SUBSCRIBED,
+              // which triggers fetchState() again. No manual re-subscribe needed.
+              setStatus("reconnecting");
+            } else if (subscribeStatus === "CLOSED") {
+              setStatus("error");
+            }
+          });
+      } catch {
+        // Channel already subscribed by a sibling hook instance (SDK topic dedup).
+        // Broadcast listener is already registered above — SC1 still works.
+        // Read initial presence count from the shared channel's state once.
+        setStatus("connected");
+        await fetchState();
+        setParticipantCount(Object.keys(channel.presenceState()).length);
+      }
+
+      channelRef.current = channel;
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+
+    void setup();
 
     // ----------------------------------------------------------------
     // CLEANUP — runs on unmount and on every [gameId, playerId] change.
     //
     // Order matters:
-    //   1. Remove the visibilitychange listener first (prevents fetchState()
-    //      firing on a partially-torn-down channel)
-    //   2. sb.removeChannel() fully removes the channel from the client's
-    //      internal registry — React 19 StrictMode fires this cleanup then
-    //      re-runs the effect; the second mount gets a fresh channel with the
-    //      same topic string rather than a conflicted duplicate (Pitfall 2).
+    //   1. Set cancelled = true so any in-flight setup() bails out immediately
+    //      (prevents attaching listeners to a channel we no longer own).
+    //   2. Remove the visibilitychange listener (prevents fetchState() firing
+    //      on a partially-torn-down channel).
+    //   3. sb.removeChannel() starts async teardown — sets the underlying
+    //      Phoenix channel to "leaving" synchronously, then awaits server ack.
+    //      If setup() is still awaiting a prior removeChannel(), the cancelled
+    //      guard prevents it from creating a new channel after cleanup fires.
     // ----------------------------------------------------------------
     return () => {
+      cancelled = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      sb.removeChannel(channel);
+      if (channelRef.current !== null) {
+        void sb.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [gameId, playerId]); // stable — only re-run when game or player changes
 
