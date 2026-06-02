@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 01 — Plans 01-02-03 complete; Task 3 of 01-03 pending human (Vercel deploy)
-stopped_at: Phase 01 Plan 03 Tasks 1+2 complete — awaiting Task 3 Vercel deploy checkpoint
-last_updated: "2026-06-02T01:10:00.000Z"
-last_activity: 2026-06-02 -- 01-03 walking skeleton built; verify-rls + verify-dedup PASS; SC4 grep clean
+status: Phase 01 COMPLETE — deployed to https://joc-woad.vercel.app/ (200, live data, dedup verified)
+stopped_at: Phase 01 complete; ready to start Phase 02 (Realtime)
+last_updated: "2026-06-02T05:30:00.000Z"
+last_activity: 2026-06-02 -- Phase 01 closed: app moved to repo github.com/acstoian/joc, deployed on Vercel; root 200 + live Supabase read + 409 dedup verified in prod
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
   completed_plans: 3
   percent: 14
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** During a live wedding, the room stays in sync and the game feels instant and fun — host actions update every phone and the TV together within ~1s, no refreshes, no lost players.
-**Current focus:** Phase 01 — foundation-schema
+**Current focus:** Phase 02 — Realtime (next)
 
 ## Current Position
 
-Phase: 01 (foundation-schema) — AWAITING HUMAN CHECKPOINT (Task 3: Vercel deploy)
-Plan: 3 of 3 (Tasks 1+2 complete; Task 3 human-action gate)
-Status: Walking skeleton built locally; SC1 (Vercel 200) pending user action
-Last activity: 2026-06-02 -- 01-03 walking skeleton; verify-rls PASS; verify-dedup PASS; SC4 grep clean
+Phase: 01 (foundation-schema) — COMPLETE ✅ (all 5 success criteria met)
+Plan: 3 of 3 complete
+Status: Deployed at https://joc-woad.vercel.app/ — root 200, live anon read (Faza: lobby — 5 încărcate), POST dedup 200→409 verified in prod
+Last activity: 2026-06-02 -- Phase 01 closed; project relocated to github.com/acstoian/joc; Vercel live
 
 Progress: [███░░░░░░░] 14%
 

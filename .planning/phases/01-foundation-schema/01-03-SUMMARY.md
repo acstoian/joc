@@ -196,11 +196,24 @@ The service_role key is present only in the webpack opaque server-production cac
 
 - Build output flooded stderr with webpack bundle internals; used file redirection (`> out.txt 2> err.txt`) to isolate the actual build result (exit code + stdout route table).
 
-## Task 3 — BLOCKED: Pending Human Checkpoint (Vercel Deploy)
+## Task 3 — COMPLETE: Deployed to Vercel (joc repo)
 
-**Status:** NOT EXECUTED — this is a `checkpoint:human-action` gate.
+**Status:** DONE. Live production URL: **https://joc-woad.vercel.app/**
 
-Task 3 requires the user to manually create a new Vercel project. The assistant cannot self-provision Vercel projects.
+Deployment moved to a dedicated GitHub repo `github.com/acstoian/joc` (not the wedding repo's `joc` branch) at the user's request, with Vercel importing that repo (Production Branch = `main`). Verified in production:
+- `curl https://joc-woad.vercel.app/` → **HTTP 200**
+- Root page shows live data: **Faza: lobby — Întrebări: 5 încărcate** (real anon read via `questions_public`)
+- `POST /api/skeleton-answer` → **200** first call, **409 `{"error":"already_answered"}`** on repeat (SCOR-03 dedup / 23505 live in prod)
+
+Resolved deploy blockers along the way:
+1. `package-lock.json` was out of sync with `package.json` → Vercel `npm ci` failed → regenerated the lock.
+2. Root page statically prerendered a build-time Supabase fetch → added `export const dynamic = "force-dynamic"` + env guard so the build never depends on DB/env.
+3. Vercel **Framework Preset was "Other"** → set to **Next.js** and redeployed (the decisive fix — "Other" never wired up the Next.js runtime/routing).
+4. Vercel **Deployment Protection (Require Log In)** turned OFF for Production (was returning 401 SSO gate).
+5. All 4 env vars set for Production/Preview.
+
+### Original checkpoint context (for history)
+Task 3 originally required the user to manually create a Vercel project. The assistant cannot self-provision Vercel projects.
 
 ### Steps Required
 
@@ -246,7 +259,7 @@ feat(01-03): walking skeleton — anon read page, service-role write route, RLS/
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| SC1: App deploys to Vercel on `joc`, returns 200 | PENDING | Task 3 human checkpoint |
+| SC1: App deploys to Vercel, returns 200 | DONE | https://joc-woad.vercel.app/ → HTTP 200 with live data (Faza: lobby — 5 încărcate) |
 | SC2: Five tables with correct columns/constraints | DONE (Plan 02) | Schema + types verified in 01-02 |
 | SC3: RLS enabled; correct_option not anon-readable, tested with anon key | DONE | verify-rls.mjs: 2/2 PASS |
 | SC4: service_role key server-side only; post-build grep clean | DONE | .next/static/ has 0 matches |
@@ -256,7 +269,8 @@ feat(01-03): walking skeleton — anon read page, service-role write route, RLS/
 
 - Phase 2 (Realtime) can start: typed clients, schema, and server-side broadcast helper are all in place.
 - The `/api/skeleton-answer` route is the Phase 3 write-path substrate — its phase guard and 23505 pattern will be extended, not replaced.
-- SC1 (Vercel deploy) remains the only open Phase 1 criterion — unblocks after Task 3 human checkpoint.
+- SC1 (Vercel deploy) is now DONE — https://joc-woad.vercel.app/ live. All five Phase 1 success criteria met.
+- NOTE: project relocated to dedicated repo `github.com/acstoian/joc`; Vercel deploys from there (Production Branch `main`). The wedding repo's `joc` branch is abandoned and left untouched.
 
 ---
 *Phase: 01-foundation-schema*
