@@ -65,7 +65,20 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A `visibilitychange` handler fires an immediate reconnect + state-fetch when the tab becomes visible after being backgrounded on iOS Safari
   5. No `.on('postgres_changes', ...)` subscription exists in any client-side component for game state tables
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [x] 02-01-PLAN.md — Contracts: GAME_EVENT union + realtime client opts (worker/heartbeat/jitter) + GET /api/game/state resync endpoint
+
+**Wave 2** *(blocked on Wave 1)*
+
+  - [x] 02-02-PLAN.md — Headless useGameSync hook: subscribe-then-fetch + presence + visibilitychange reconnect resilience
+
+**Wave 3** *(blocked on Wave 2)*
+
+  - [ ] 02-03-PLAN.md — Throwaway /sync-demo harness (server action + 2 subscriber panes) proving all 5 success criteria
+
 **UI hint**: no
 
 ### Phase 3: Server Write Path & State Machine
@@ -159,7 +172,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Schema | 0/3 | Planned | - |
-| 2. Realtime Core | 0/TBD | Not started | - |
+| 2. Realtime Core | 2/3 | In Progress|  |
 | 3. Server Write Path & State Machine | 0/TBD | Not started | - |
 | 4. Host Dashboard | 0/TBD | Not started | - |
 | 5. Guest App | 0/TBD | Not started | - |

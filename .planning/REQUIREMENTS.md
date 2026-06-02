@@ -67,12 +67,12 @@ Requirements for the live-event release. Each maps to a roadmap phase.
 
 ### Realtime & Resilience (Non-functional)
 
-- [ ] **RT-01**: Current question, reveal, scores, and round transitions sync live across all clients (guest, host, TV)
+- [x] **RT-01**: Current question, reveal, scores, and round transitions sync live across all clients (guest, host, TV)
 - [ ] **RT-02**: Game state is distributed via Supabase Broadcast (server writes DB then publishes); clients do not subscribe to Postgres Changes for game state
-- [ ] **RT-03**: Clients recover authoritative state via subscribe-then-fetch on (re)connect
-- [ ] **RT-04**: Reconnect handles unstable mobile connections (jittered backoff, `worker:true`, visibilitychange re-subscribe for iOS screen-lock)
+- [x] **RT-03**: Clients recover authoritative state via subscribe-then-fetch on (re)connect
+- [x] **RT-04**: Reconnect handles unstable mobile connections (jittered backoff, `worker:true`, visibilitychange re-subscribe for iOS screen-lock)
 - [ ] **RT-05**: System supports 100+ simultaneous guests with sub-second perceived sync
-- [ ] **RT-06**: UI is mobile-first and responsive, with smooth animations on low-end phones (Safari/Chrome)
+- [x] **RT-06**: UI is mobile-first and responsive, with smooth animations on low-end phones (Safari/Chrome)
 - [ ] **RT-07**: Soft-luxury wedding aesthetic — glassmorphism accents, animated gradients, subtle confetti, smooth transitions
 - [ ] **RT-08**: A pre-event production dry run validates concurrency, reconnect, and host flow on a real device
 
@@ -111,10 +111,10 @@ Explicitly excluded. Documented to prevent scope creep.
 | RT-05 | Phase 1 — Foundation & Schema | Pending |
 | SCOR-03 | Phase 1 — Foundation & Schema | Pending |
 | SCOR-04 | Phase 1 — Foundation & Schema | Pending |
-| RT-01 | Phase 2 — Realtime Core | Pending |
-| RT-03 | Phase 2 — Realtime Core | Pending |
-| RT-04 | Phase 2 — Realtime Core | Pending |
-| RT-06 | Phase 2 — Realtime Core | Pending |
+| RT-01 | Phase 2 — Realtime Core | Complete |
+| RT-03 | Phase 2 — Realtime Core | Complete |
+| RT-04 | Phase 2 — Realtime Core | Complete |
+| RT-06 | Phase 2 — Realtime Core | Complete |
 | JOIN-01 | Phase 3 — Server Write Path & State Machine | Pending |
 | JOIN-02 | Phase 3 — Server Write Path & State Machine | Pending |
 | JOIN-03 | Phase 3 — Server Write Path & State Machine | Pending |
@@ -157,11 +157,13 @@ Explicitly excluded. Documented to prevent scope creep.
 | RT-08 | Phase 7 — Polish & Pre-Event Hardening | Pending |
 
 **Coverage:**
+
 - v1 requirements: 48 total (note: original header said 41; actual count from listed requirements is 48)
 - Mapped to phases: 48 / 48
 - Unmapped: 0 ✓
 
 **Phase distribution:**
+
 - Phase 1: 4 requirements (RT-02, RT-05, SCOR-03, SCOR-04)
 - Phase 2: 4 requirements (RT-01, RT-03, RT-04, RT-06)
 - Phase 3: 12 requirements (JOIN-01–03, HOST-01–07, SCOR-01–02)

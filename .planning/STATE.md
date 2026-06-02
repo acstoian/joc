@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 01 COMPLETE — deployed to https://joc-woad.vercel.app/ (200, live data, dedup verified)
-stopped_at: Phase 01 complete; ready to start Phase 02 (Realtime)
-last_updated: "2026-06-02T05:30:00.000Z"
-last_activity: 2026-06-02 -- Phase 01 closed: app moved to repo github.com/acstoian/joc, deployed on Vercel; root 200 + live Supabase read + 409 dedup verified in prod
+status: executing
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-06-02T13:00:00.000Z"
+last_activity: 2026-06-02 -- Phase 02 Plan 02 complete — useGameSync hook implemented
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 14
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** During a live wedding, the room stays in sync and the game feels instant and fun — host actions update every phone and the TV together within ~1s, no refreshes, no lost players.
-**Current focus:** Phase 02 — Realtime (next)
+**Current focus:** Phase 02 — realtime-core
 
 ## Current Position
 
-Phase: 01 (foundation-schema) — COMPLETE ✅ (all 5 success criteria met)
-Plan: 3 of 3 complete
-Status: Deployed at https://joc-woad.vercel.app/ — root 200, live anon read (Faza: lobby — 5 încărcate), POST dedup 200→409 verified in prod
-Last activity: 2026-06-02 -- Phase 01 closed; project relocated to github.com/acstoian/joc; Vercel live
+Phase: 02 (realtime-core) — EXECUTING
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-06-02 -- Phase 02 Plan 02 complete — useGameSync hook implemented
 
 Progress: [███░░░░░░░] 14%
 
@@ -52,6 +52,8 @@ Progress: [███░░░░░░░] 14%
 - Trend: On target
 
 *Updated after each plan completion*
+| Phase 02-realtime-core P01 | 12 | 3 tasks | 4 files |
+| Phase 02-realtime-core P02 | 4 | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -71,6 +73,11 @@ Recent decisions affecting current work:
 - 01-03: players.device_token is UUID type — skeleton/test constants must be UUID strings, not plain strings
 - 01-03: service_role key is absent from .next/static/ (client chunks); present only in webpack server-production cache (not a deployed artifact) — SC4 satisfied
 - 01-03: Supabase PostgREST returns 0 rows (not an error) for USING(false) RLS denial — both are valid; verify-rls handles both forms
+- [Phase ?]: 02-01: GameEvent union locked typed-signal+re-fetch contract; Phase 3+ may add members but not reshape existing ones
+- [Phase ?]: 02-01: correctOption stubbed null in GET /api/game/state (Phase 2); Phase 3 reveal path populates from questions.correct_option
+- [Phase ?]: 02-01: adminClient in GET /api/game/state — answers RLS is USING(false) for anon; route enforces isolation by returning only requesting player's own answer
+- [Phase 02-02]: supabaseRef = useRef(createClient()) pattern for stable singleton in hooks — avoids exhaustive-deps false positive without adding supabase to deps list
+- [Phase 02-02]: useGameSync tasks combined into one commit — presence + visibilitychange are inseparable from channel setup in the same useEffect block
 
 ### Pending Todos
 
@@ -90,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-02T01:10:00.000Z
-Stopped at: Phase 01 Plan 03 Tasks 1+2 complete — awaiting Task 3 Vercel deploy (human-action checkpoint)
-Resume file: .planning/phases/01-foundation-schema/01-03-SUMMARY.md
+Last session: 2026-06-02T12:53:58.145Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
