@@ -230,10 +230,21 @@ export function useGameSync(
       } catch {
         // Channel already subscribed by a sibling hook instance (SDK topic dedup).
         // Broadcast listener is already registered above — SC1 still works.
-        // Read initial presence count from the shared channel's state once.
+        // We cannot register a presence "sync" listener on an already-joined
+        // channel (SDK throws). Instead:
+        //   - fetch authoritative state immediately (subscribe-then-fetch, RT-03)
+        //   - defer the presence count read by one macrotask tick so the owning
+        //     instance's track() call has time to resolve — produces an honest
+        //     count that matches the primary pane rather than a stale zero.
         setStatus("connected");
         await fetchState();
-        setParticipantCount(Object.keys(channel.presenceState()).length);
+        // Defer so the primary instance's track() round-trip can complete first.
+        // Wrapped in a cancelled guard so we do not set state after unmount.
+        setTimeout(() => {
+          if (!cancelled) {
+            setParticipantCount(Object.keys(channel.presenceState()).length);
+          }
+        }, 300);
       }
 
       channelRef.current = channel;
@@ -250,7 +261,12 @@ export function useGameSync(
     //      (prevents attaching listeners to a channel we no longer own).
     //   2. Remove the visibilitychange listener (prevents fetchState() firing
     //      on a partially-torn-down channel).
-    //   3. sb.removeChannel() starts async teardown — sets the underlying
+    //   3. channel.untrack() removes this client's presence entry from the
+    //      server before the channel tears down. This is critical in React 19
+    //      StrictMode: without untrack(), the first mount's presence entry
+    //      lingers until the server ages it out, causing ghost entries to
+    //      accumulate across StrictMode double-mount cycles (D-04, D-09).
+    //   4. sb.removeChannel() starts async teardown — sets the underlying
     //      Phoenix channel to "leaving" synchronously, then awaits server ack.
     //      If setup() is still awaiting a prior removeChannel(), the cancelled
     //      guard prevents it from creating a new channel after cleanup fires.
@@ -259,8 +275,16 @@ export function useGameSync(
       cancelled = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (channelRef.current !== null) {
-        void sb.removeChannel(channelRef.current);
+        const ch = channelRef.current;
         channelRef.current = null;
+        // untrack() before removeChannel() so the server removes this client's
+        // presence entry cleanly. Fire-and-forget: cleanup is synchronous,
+        // but untrack + removeChannel are both async teardown — the channel
+        // leaves shortly after. Ignoring the returned promise is intentional
+        // (effect cleanup cannot be async per React contract).
+        void ch.untrack().finally(() => {
+          void sb.removeChannel(ch);
+        });
       }
     };
   }, [gameId, playerId]); // stable — only re-run when game or player changes
