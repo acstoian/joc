@@ -13,13 +13,31 @@ import type { Database } from "@/types/database";
  *
  * Key isolation (D-13): anon key only — service_role key never used here.
  */
+
+// Render at request time, never at build. The data is intentionally live on
+// every request, and this also stops the Vercel build from depending on the
+// DB/env being reachable at build time (a missing env at build would otherwise
+// throw in createClient and fail the whole production build → 404).
+export const dynamic = "force-dynamic";
+
 async function getSkeletonData() {
   // Anon key only — service_role key must never be used in a Server Component
   // that renders in the client bundle surface area (D-13).
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Guard: degrade gracefully instead of throwing if env is misconfigured on
+  // the host. Surfaces a friendly card rather than a 500/build crash.
+  if (!url || !anonKey) {
+    return {
+      phase: "unknown",
+      questionCount: 0,
+      error:
+        "Lipsesc variabilele Supabase (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY) în mediul de deploy.",
+    };
+  }
+
+  const supabase = createClient<Database>(url, anonKey);
 
   // Parallelize independent fetches (vercel: async-parallel)
   const [gameResult, countResult] = await Promise.all([
