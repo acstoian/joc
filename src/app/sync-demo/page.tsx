@@ -313,12 +313,12 @@ export default function SyncDemoPage() {
         <SubscriberPane
           label="Pane A"
           gameId={gameId}
-          playerId="stub-player-a"
+          playerId="c0000000-0000-4000-8000-000000000011"
         />
         <SubscriberPane
           label="Pane B"
           gameId={gameId}
-          playerId="stub-player-b"
+          playerId="c0000000-0000-4000-8000-000000000012"
         />
       </div>
 
