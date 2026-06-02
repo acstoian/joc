@@ -1,26 +1,18 @@
-# Next Session Handoff
-_Last updated: 2026-03-06 | Session 2_
+# Next Session — Joc
 
-## Read First
-Load `context-snapshot.md` for full detail before doing anything.
+## Start here
+1. Read `.claude/context-snapshot.md` (full current state) and `.planning/STATE.md` (GSD source of truth).
+2. **Phase 1 is complete and deployed** (https://joc-woad.vercel.app/). Nothing from Phase 1 is outstanding.
 
-## Project Snapshot
-Romanian wedding site for **Cristina & Andrei**, 26 Sept 2026. Next.js 16 / React 19 / Tailwind v4 / Prisma + PostgreSQL (Neon).
-`npm run dev` — dev server at localhost:3000. `/admin` — admin panel (password: `wedding2026`).
-Deployed on Vercel — push to `master` branch auto-redeploys.
+## First task: kick off Phase 2 — Realtime
+Run: **`/gsd-plan-phase 2`**  (optionally `/gsd-discuss-phase 2` first to gather scope).
 
-## Immediate Next Action
-No active task — all user requests completed. Wait for new instructions.
-If resuming, verify dev server is running (`npm run dev`) and check `http://localhost:3000` via Playwright MCP.
+Phase 2 builds the Supabase **Broadcast** room-sync core — the heartbeat of the whole app
+(host action → every phone + the TV update together within ~1s). Per project memory, the rich
+`.planning/research/` likely makes a per-phase RESEARCH step redundant.
 
-## Priority Queue
-1. No outstanding tasks. Project is in a clean, deployed state.
-2. If user wants changes: edit → `git add -A && git commit -m "..." && git push` → Vercel auto-deploys.
-
-## Key Context
-- **Git branch**: `master` (not main) — Vercel deploys from master
-- **Database**: Neon PostgreSQL, already migrated — tables exist, ready to receive RSVPs
-- **Images**: All in `public/images/` — corner-left.jpg used for both corners (right one uses `scaleX(-1)`)
-- **RSVP form**: Supports 1–4 guests; extra guests stored comma-separated in `plusOneName`/`plusOneMenu`
-- **Prisma regeneration**: If EPERM error, stop dev server first then `npx prisma generate`
-- **GitHub PAT**: User should regenerate at github.com (was shared in chat session)
+## Reminders
+- You are in the canonical repo `C:\Work\Joc` (GitHub `acstoian/joc`, branch `main`). **Commit normally** here.
+- The `admin.ts` `broadcast()` helper already exists — Phase 2 consumes it, doesn't rebuild it.
+- Use Supabase **Broadcast**, not Postgres Changes (locked decision).
+- Frontend work: project preference is to run the `ui-ux-pro-max` skill.
