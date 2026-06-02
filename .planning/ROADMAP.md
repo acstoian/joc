@@ -77,7 +77,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*
 
-  - [ ] 02-03-PLAN.md — Throwaway /sync-demo harness (server action + 2 subscriber panes) proving all 5 success criteria
+  - [x] 02-03-PLAN.md — Throwaway /sync-demo harness (server action + 2 subscriber panes) proving all 5 success criteria
 
 **UI hint**: no
 
@@ -172,7 +172,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Schema | 0/3 | Planned | - |
-| 2. Realtime Core | 2/3 | In Progress|  |
+| 2. Realtime Core | 3/3 | Complete | 2026-06-02 |
 | 3. Server Write Path & State Machine | 0/TBD | Not started | - |
 | 4. Host Dashboard | 0/TBD | Not started | - |
 | 5. Guest App | 0/TBD | Not started | - |
