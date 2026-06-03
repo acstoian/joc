@@ -70,7 +70,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  if (name.length > 30) {
+  // WR-02: count Unicode code points, not UTF-16 code units. `name.length`
+  // counts surrogate pairs as 2, so a name with emoji / astral characters
+  // would be rejected at far fewer than 30 visible characters. `[...name]`
+  // iterates by code point (the string iterator is Unicode-aware), giving a
+  // count that matches user expectation much more closely.
+  if ([...name].length > 30) {
     return NextResponse.json(
       { error: "displayName too long" },
       { status: 400 }
