@@ -96,17 +96,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // ── Step 3: Reset phase to 'question' ─────────────────────────────────────
-  // No CAS needed — surgical reset is valid from any non-lobby phase
-  // (question / locked / revealed). The host re-asks the same question.
-  const { error: phaseError } = await adminClient
+  // CR-04: surgical reset is a two-step read-then-write, so it needs a phase
+  // guard. Without it, a concurrent `end` action that sets phase='ended'
+  // between step 1 and step 3 would be silently rewound back to 'question'.
+  // Restrict the UPDATE to the non-terminal phases reset is valid from
+  // (question / locked / revealed); never rewind from 'ended' or back to
+  // 'lobby'. 0 rows affected = the game ended (or otherwise moved) concurrently
+  // — treat as a no-op rather than an error.
+  const { data: resetRows, error: phaseError } = await adminClient
     .from("games")
     .update({ phase: "question" })
-    .eq("id", gameId);
+    .eq("id", gameId)
+    .in("phase", ["question", "locked", "revealed"])
+    .select("phase");
 
   if (phaseError) {
     return NextResponse.json(
       { error: "phase_reset_failed", detail: phaseError.message },
       { status: 500 }
+    );
+  }
+
+  // 0 rows = the game advanced to a terminal phase (e.g. 'ended') concurrently.
+  // Do not rewind it; return a no-op so the host sees the reset did not apply.
+  if (!resetRows || resetRows.length === 0) {
+    return NextResponse.json(
+      { noop: true, reason: "phase_changed" },
+      { status: 200 }
     );
   }
 
