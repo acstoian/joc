@@ -127,22 +127,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // recompute_scores is idempotent — it reads from correct_option (just written
   // in step 2) and replaces the scores table atomically via ON CONFLICT DO UPDATE.
   //
-  // IMPORTANT: migration 0004_recompute_scores.sql must be pushed to the live DB.
   // Best-effort: scoreError logged but does NOT fail the reveal (T-03-16).
-  //
-  // CR-05: recompute_scores is absent from the generated database.ts Functions
-  // map (migration 0004 is committed but not yet pushed, so `gen types` has not
-  // picked it up — only reset_game is present). Rather than a bare `as any`,
-  // cast adminClient.rpc through a narrow, accurate signature so the function
-  // name and the args shape are still type-checked at this call site.
-  // TODO(migration-0004): drop this cast after `supabase db push` + `gen types`
-  // regenerates database.ts with recompute_scores in public.Functions.
-  type RecomputeScoresRpc = (
-    fn: "recompute_scores",
-    args: { p_game_id: string }
-  ) => Promise<{ error: { message: string } | null }>;
-  const recomputeScores = adminClient.rpc as unknown as RecomputeScoresRpc;
-  const { error: scoreError } = await recomputeScores("recompute_scores", {
+  // CR-05 resolved: migration 0004 is pushed and database.ts regenerated, so
+  // recompute_scores is in public.Functions — this call is natively type-checked.
+  const { error: scoreError } = await adminClient.rpc("recompute_scores", {
     p_game_id: gameId,
   });
   if (scoreError) {

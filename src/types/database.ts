@@ -268,6 +268,7 @@ export type Database = {
       }
     }
     Functions: {
+      recompute_scores: { Args: { p_game_id: string }; Returns: undefined }
       reset_game: { Args: { p_game_id: string }; Returns: undefined }
     }
     Enums: {
