@@ -30,6 +30,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { PhaseButton } from "@/components/host/PhaseButton";
+import { EmergencyPanel } from "@/components/host/EmergencyPanel";
 import { hostFetch } from "@/lib/host/constants";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
 import { motion } from "motion/react";
@@ -401,6 +402,9 @@ export function ControlTab({
           />
         </div>
       </div>
+
+      {/* ── Section C: Emergency controls (collapsible, Plan 05 HOST-11) ─────── */}
+      <EmergencyPanel gameId={gameId} password={password} questions={questions} />
     </div>
   );
 }
