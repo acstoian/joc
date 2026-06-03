@@ -178,9 +178,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // ── Step 5: Best-effort broadcast (D-bcast, T-03-11) ──────────────────────
   // A broadcast failure MUST NOT fail the host request — log and proceed.
   // DB is the authoritative source of truth; clients converge via subscribe-then-fetch.
+  //
+  // WR-04: for `start`, source the questionId from the COMMITTED row
+  // (updated[0].current_question_id) rather than the pre-CAS firstQuestionId.
+  // The CAS above guarantees `updated` is non-empty here (the 0-row lost-race
+  // case already returned). Using the committed value means a request that won
+  // the CAS broadcasts exactly what it wrote — no stale pre-read value.
   const resolvedQuestionId =
     action === "start"
-      ? firstQuestionId!
+      ? (updated[0].current_question_id ?? firstQuestionId ?? "")
       : action === "next"
       ? (nextQuestionId as string)
       : (game.current_question_id ?? "");
