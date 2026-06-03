@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation & Schema** - Next.js scaffold, Supabase Pro setup, full DB schema with constraints + RLS + key isolation
 - [x] **Phase 2: Realtime Core** - Broadcast channel, useGameSync hook, subscribe-then-fetch, full reconnect resilience (completed 2026-06-02)
-- [ ] **Phase 3: Server Write Path & State Machine** - All API routes (join, answer, host transitions, reveal + scoring), anti-cheat, compare-and-swap
+- [x] **Phase 3: Server Write Path & State Machine** - All API routes (join, answer, host transitions, reveal + scoring), anti-cheat, compare-and-swap (completed 2026-06-03)
 - [ ] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery
 - [ ] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views
 - [ ] **Phase 6: TV Display Mode** - /display cinematic landscape route with all screens and host-initiated countdown
@@ -109,7 +109,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on 03-01, 03-04)*
 
-  - [ ] 03-05-PLAN.md — Extended GET /api/game/state: phase-gated correctOption (revealed-only) + A/B distribution + leaderboard ranked by correct_count desc
+  - [x] 03-05-PLAN.md — Extended GET /api/game/state: phase-gated correctOption (revealed-only) + A/B distribution + leaderboard ranked by correct_count desc
 
 **UI hint**: no
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundation & Schema | 0/3 | Planned | - |
 | 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
-| 3. Server Write Path & State Machine | 4/5 | In Progress|  |
+| 3. Server Write Path & State Machine | 5/5 | Complete   | 2026-06-03 |
 | 4. Host Dashboard | 0/TBD | Not started | - |
 | 5. Guest App | 0/TBD | Not started | - |
 | 6. TV Display Mode | 0/TBD | Not started | - |

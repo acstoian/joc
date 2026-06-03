@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 3 context gathered
-last_updated: "2026-06-03T04:10:41.061Z"
+last_updated: "2026-06-03T04:18:49.770Z"
 last_activity: 2026-06-02 -- Phase 03 execution started
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
-  percent: 29
+  completed_plans: 11
+  percent: 43
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-01)
 ## Current Position
 
 Phase: 03 (server-write-path-state-machine) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-06-02 -- Phase 03 execution started
 
@@ -58,6 +58,7 @@ Progress: [████░░░░░░] 21%
 | Phase 02-realtime-core P03 | 45 | 2 tasks + 1 checkpoint | 2 files |
 | Phase 03-server-write-path-state-machine P03-03 | 15 | 2 tasks | 1 files |
 | Phase 03-server-write-path-state-machine P04 | 5 | 2 tasks | 2 files |
+| Phase 03-server-write-path-state-machine P05 | 10 min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Recent decisions affecting current work:
 - [Phase 02-03]: Stub playerIds for useGameSync must be well-formed UUIDs — GET /api/game/state validates with UUID regex; plain strings return 400 and leave state stuck loading
 - [Phase 02-03]: useGameSync StrictMode fix — createClient() must be called inside useEffect (not in useRef at module scope) so each StrictMode remount creates a fresh channel reference; reusing a removed channel crashes the WebSocket
 - [Phase 02-03]: Presence untrack-before-removeChannel is mandatory — channel.untrack() must precede removeChannel() or the ghost presence entry persists until server-side timeout, inflating participantCount
+- [Phase 03]: correctOption secrecy: base questions read fenced inside if (phase === 'revealed') — the ONE exception to questions_public rule (Pitfall 3, T-03-17)
 
 ### Pending Todos
 
@@ -105,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-03T04:10:41.057Z
+Last session: 2026-06-03T04:18:49.767Z
 Stopped at: Phase 3 context gathered
 Resume file: .planning/phases/03-server-write-path-state-machine/03-CONTEXT.md
