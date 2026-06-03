@@ -14,16 +14,19 @@ import type { GameStateSnapshot } from "@/hooks/useGameSync";
  *   playerId — UUID of the player (optional; null for TV/host callers)
  *
  * Security:
- *   - T-02-01: Reads questions_public view (never base questions table);
- *              correct_option is NOT exposed pre-reveal (Pitfall 5, ASVS V4)
- *   - T-02-02: gameId validated as present and UUID-shaped → 400 on malformed
+ *   - T-02-01 / T-03-17: Reads questions_public view for question text (never base
+ *              questions table); correct_option is ONLY exposed when phase === 'revealed'
+ *              via a base-questions read fenced behind the phase gate (Pitfall 3, ASVS V4).
+ *   - T-02-02 / T-03-19: gameId validated as present and UUID-shaped → 400 on malformed
  *              (ASVS V5, D-03 boundary)
  *   - T-02-04: Only adminClient is imported (server-only module); no raw
  *              SUPABASE_SERVICE_ROLE_KEY reference in this file
  *
- * Phase 2 stubs: correctOption is always null here; Phase 3's reveal path
- * will populate it by reading correct_option from the base questions table
- * after phase === 'revealed'.
+ * Phase 3 (D-02) now populates:
+ *   - correctOption: "A"|"B" when phase === 'revealed' (base questions table, behind gate)
+ *   - distribution: { A, B } when phase === 'locked' or 'revealed'
+ *   - leaderboard: { name, score }[] ranked by correct_count desc when phase !== 'lobby'
+ * Replaces the Phase 2 stubs. All Phase 2 reads (questions_public, myAnswer) preserved.
  */
 
 // Simple UUID v4 shape validation (not cryptographically strict — just enough
@@ -115,15 +118,58 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // correctOption: Phase 2 stub — null always.
-  // Phase 3's reveal write path will populate questions.correct_option and
-  // this endpoint will be updated to return it when phase === 'revealed'.
-  const correctOption: "A" | "B" | null = null; // stub — Plan 05 will fill
+  // ── Step 4: correctOption — phase-gated read from base questions table ──────
+  // ONLY expose when phase === 'revealed' (Pitfall 3, T-03-17, ASVS V4).
+  // MUST use adminClient.from("questions") (base table) — questions_public view
+  // deliberately omits correct_option. This is the ONE place in the read path
+  // that touches the base questions table, and only post-reveal.
+  let correctOption: "A" | "B" | null = null;
+  if (game.phase === "revealed" && game.current_question_id) {
+    const { data: revealedQ } = await adminClient
+      .from("questions") // base table required — view omits correct_option
+      .select("correct_option")
+      .eq("id", game.current_question_id)
+      .single();
+    correctOption = (revealedQ?.correct_option as "A" | "B") ?? null;
+  }
 
-  // distribution + leaderboard: Phase 3 stubs — populated by Plan 05 (state route extension).
-  // Added here to satisfy the widened GameStateSnapshot type contract (D-02).
-  const distribution: { A: number; B: number } | null = null; // stub — Plan 05 will fill
-  const leaderboard: { name: string; score: number }[] = []; // stub — Plan 05 will fill
+  // ── Step 5: distribution — A/B answer counts for locked/revealed phases ────
+  // Only relevant once answers are locked in (phase === 'locked' or 'revealed').
+  // Client-side count is fine for ≤100 players (A3 — no GROUP BY needed).
+  let distribution: { A: number; B: number } | null = null;
+  if (
+    (game.phase === "locked" || game.phase === "revealed") &&
+    game.current_question_id
+  ) {
+    const { data: answerRows } = await adminClient
+      .from("answers")
+      .select("choice")
+      .eq("question_id", game.current_question_id);
+    const rows = answerRows ?? [];
+    distribution = {
+      A: rows.filter((a) => a.choice === "A").length,
+      B: rows.filter((a) => a.choice === "B").length,
+    };
+  }
+
+  // ── Step 6: leaderboard — ranked by correct_count desc (SCOR-02) ───────────
+  // Populated whenever phase is not 'lobby' (scores exist after first reveal).
+  // Uses scores JOIN players (inner join so only scored players appear).
+  // A4 fallback: if the !inner join syntax causes a build error, split into
+  // two queries (fetch scores, then fetch players by id array).
+  let leaderboard: { name: string; score: number }[] = [];
+  if (game.phase !== "lobby") {
+    const { data: scoreRows } = await adminClient
+      .from("scores")
+      .select("correct_count, players!inner(display_name)")
+      .eq("players.game_id", gameId)
+      .order("correct_count", { ascending: false })
+      .limit(20);
+    leaderboard = (scoreRows ?? []).map((s) => ({
+      name: (s.players as { display_name: string }).display_name,
+      score: s.correct_count,
+    }));
+  }
 
   const snapshot: GameStateSnapshot = {
     phase: game.phase as GameStateSnapshot["phase"],
