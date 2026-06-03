@@ -154,21 +154,38 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // ── Step 6: leaderboard — ranked by correct_count desc (SCOR-02) ───────────
   // Populated whenever phase is not 'lobby' (scores exist after first reveal).
-  // Uses scores JOIN players (inner join so only scored players appear).
-  // A4 fallback: if the !inner join syntax causes a build error, split into
-  // two queries (fetch scores, then fetch players by id array).
+  //
+  // CR-01 fix: PostgREST ignores .eq("players.game_id", ...) on a foreign-table
+  // column — the filter never reaches the players table and all scores across
+  // every game were returned. Fix: two-step query. First resolve player IDs for
+  // this game, then filter scores by those IDs. This is unambiguous and correct.
   let leaderboard: { name: string; score: number }[] = [];
   if (game.phase !== "lobby") {
-    const { data: scoreRows } = await adminClient
-      .from("scores")
-      .select("correct_count, players!inner(display_name)")
-      .eq("players.game_id", gameId)
-      .order("correct_count", { ascending: false })
-      .limit(20);
-    leaderboard = (scoreRows ?? []).map((s) => ({
-      name: (s.players as { display_name: string }).display_name,
-      score: s.correct_count,
-    }));
+    // Step 6a: get all player IDs that belong to this game
+    const { data: playerRows } = await adminClient
+      .from("players")
+      .select("id, display_name")
+      .eq("game_id", gameId);
+
+    const players = playerRows ?? [];
+    const playerIds = players.map((p) => p.id);
+
+    if (playerIds.length > 0) {
+      // Step 6b: fetch scores for those players only
+      const { data: scoreRows } = await adminClient
+        .from("scores")
+        .select("player_id, correct_count")
+        .in("player_id", playerIds)
+        .order("correct_count", { ascending: false })
+        .limit(20);
+
+      // Join display_name client-side (players already fetched above)
+      const playerMap = new Map(players.map((p) => [p.id, p.display_name]));
+      leaderboard = (scoreRows ?? []).map((s) => ({
+        name: playerMap.get(s.player_id) ?? "Unknown",
+        score: s.correct_count,
+      }));
+    }
   }
 
   const snapshot: GameStateSnapshot = {
