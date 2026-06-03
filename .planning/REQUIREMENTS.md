@@ -27,13 +27,13 @@ Requirements for the live-event release. Each maps to a roadmap phase.
 
 ### Host Controls
 
-- [ ] **HOST-01**: Host can authenticate into a protected dashboard (guests need no account)
-- [ ] **HOST-02**: Host can start the game
-- [ ] **HOST-03**: Host can lock answers for the current question
+- [x] **HOST-01**: Host can authenticate into a protected dashboard (guests need no account)
+- [x] **HOST-02**: Host can start the game
+- [x] **HOST-03**: Host can lock answers for the current question
 - [ ] **HOST-04**: Host can reveal the correct answer for the current question
-- [ ] **HOST-05**: Host can advance to the next question
+- [x] **HOST-05**: Host can advance to the next question
 - [ ] **HOST-06**: Host can reset answers for the current round
-- [ ] **HOST-07**: Host can end the game
+- [x] **HOST-07**: Host can end the game
 - [ ] **HOST-08**: Host sees the live participant count
 - [ ] **HOST-09**: Host sees the live A/B answer distribution as answers arrive
 - [ ] **HOST-10**: Host can see who answered what for the current question
@@ -118,13 +118,13 @@ Explicitly excluded. Documented to prevent scope creep.
 | JOIN-01 | Phase 3 — Server Write Path & State Machine | Pending |
 | JOIN-02 | Phase 3 — Server Write Path & State Machine | Pending |
 | JOIN-03 | Phase 3 — Server Write Path & State Machine | Pending |
-| HOST-01 | Phase 3 — Server Write Path & State Machine | Pending |
-| HOST-02 | Phase 3 — Server Write Path & State Machine | Pending |
-| HOST-03 | Phase 3 — Server Write Path & State Machine | Pending |
+| HOST-01 | Phase 3 — Server Write Path & State Machine | Complete |
+| HOST-02 | Phase 3 — Server Write Path & State Machine | Complete |
+| HOST-03 | Phase 3 — Server Write Path & State Machine | Complete |
 | HOST-04 | Phase 3 — Server Write Path & State Machine | Pending |
-| HOST-05 | Phase 3 — Server Write Path & State Machine | Pending |
+| HOST-05 | Phase 3 — Server Write Path & State Machine | Complete |
 | HOST-06 | Phase 3 — Server Write Path & State Machine | Pending |
-| HOST-07 | Phase 3 — Server Write Path & State Machine | Pending |
+| HOST-07 | Phase 3 — Server Write Path & State Machine | Complete |
 | SCOR-01 | Phase 3 — Server Write Path & State Machine | Pending |
 | SCOR-02 | Phase 3 — Server Write Path & State Machine | Pending |
 | HOST-08 | Phase 4 — Host Dashboard | Pending |

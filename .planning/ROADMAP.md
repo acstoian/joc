@@ -14,7 +14,7 @@ Seven phases derived from the dependency graph established by architecture resea
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation & Schema** - Next.js scaffold, Supabase Pro setup, full DB schema with constraints + RLS + key isolation
-- [ ] **Phase 2: Realtime Core** - Broadcast channel, useGameSync hook, subscribe-then-fetch, full reconnect resilience
+- [x] **Phase 2: Realtime Core** - Broadcast channel, useGameSync hook, subscribe-then-fetch, full reconnect resilience (completed 2026-06-02)
 - [ ] **Phase 3: Server Write Path & State Machine** - All API routes (join, answer, host transitions, reveal + scoring), anti-cheat, compare-and-swap
 - [ ] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery
 - [ ] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views
@@ -95,7 +95,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The full phase state machine runs end-to-end: `lobby → question → locked → revealed → question → ended`; each transition broadcasts a `game_state` event to the channel; clicking host-advance twice in rapid succession advances by exactly 1 step (compare-and-swap)
   5. After a reveal, the `scores` table reflects exactly 1 point per player who answered correctly; the leaderboard broadcast payload ranks players by `correct_count` descending
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1**
+
+  - [x] 03-01-PLAN.md — Foundation [BLOCKING]: recompute_scores RPC (migration 0004 written + pushed), GameStateSnapshot distribution/leaderboard extension, validateHostAuth server-only helper
+  - [x] 03-02-PLAN.md — Guest write path: POST /api/game/join (idempotent upsert) + POST /api/game/answer (phase-guard 403 + dedup 409 + server-side identity binding)
+
+**Wave 2** *(blocked on 03-01)*
+
+  - [x] 03-03-PLAN.md — Host state machine: POST /api/host/transition (host-auth + D-07 CAS for start/lock/next/end + per-transition broadcast)
+  - [ ] 03-04-PLAN.md — Reveal + scoring + round reset: POST /api/host/reveal (correct_option + idempotent recompute + broadcast) + POST /api/host/reset (surgical D-08 round reset)
+
+**Wave 3** *(blocked on 03-01, 03-04)*
+
+  - [ ] 03-05-PLAN.md — Extended GET /api/game/state: phase-gated correctOption (revealed-only) + A/B distribution + leaderboard ranked by correct_count desc
+
 **UI hint**: no
 
 ### Phase 4: Host Dashboard
@@ -172,8 +187,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Schema | 0/3 | Planned | - |
-| 2. Realtime Core | 3/3 | Complete | 2026-06-02 |
-| 3. Server Write Path & State Machine | 0/TBD | Not started | - |
+| 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
+| 3. Server Write Path & State Machine | 3/5 | In Progress|  |
 | 4. Host Dashboard | 0/TBD | Not started | - |
 | 5. Guest App | 0/TBD | Not started | - |
 | 6. TV Display Mode | 0/TBD | Not started | - |
