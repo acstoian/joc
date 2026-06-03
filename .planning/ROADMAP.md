@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundation & Schema | 0/3 | Planned | - |
 | 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
-| 3. Server Write Path & State Machine | 5/5 | Complete   | 2026-06-03 |
+| 3. Server Write Path & State Machine | 5/5 | Complete    | 2026-06-03 |
 | 4. Host Dashboard | 0/TBD | Not started | - |
 | 5. Guest App | 0/TBD | Not started | - |
 | 6. TV Display Mode | 0/TBD | Not started | - |

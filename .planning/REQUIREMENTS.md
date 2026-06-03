@@ -9,9 +9,9 @@ Requirements for the live-event release. Each maps to a roadmap phase.
 
 ### Join & Identity
 
-- [ ] **JOIN-01**: Guest can open the site on a phone and join by entering their name
-- [ ] **JOIN-02**: Guest is issued a persistent device token (localStorage) on first join
-- [ ] **JOIN-03**: Guest is re-linked to their existing player/score after refresh or disconnect via the device token
+- [x] **JOIN-01**: Guest can open the site on a phone and join by entering their name
+- [x] **JOIN-02**: Guest is issued a persistent device token (localStorage) on first join
+- [x] **JOIN-03**: Guest is re-linked to their existing player/score after refresh or disconnect via the device token
 - [ ] **JOIN-04**: Guest waits in a lobby that shows live state until the host starts
 - [ ] **JOIN-05**: Lobby shows a join QR code / link for easy guest onboarding
 
@@ -115,9 +115,9 @@ Explicitly excluded. Documented to prevent scope creep.
 | RT-03 | Phase 2 — Realtime Core | Complete |
 | RT-04 | Phase 2 — Realtime Core | Complete |
 | RT-06 | Phase 2 — Realtime Core | Complete |
-| JOIN-01 | Phase 3 — Server Write Path & State Machine | Pending |
-| JOIN-02 | Phase 3 — Server Write Path & State Machine | Pending |
-| JOIN-03 | Phase 3 — Server Write Path & State Machine | Pending |
+| JOIN-01 | Phase 3 — Server Write Path & State Machine | Complete |
+| JOIN-02 | Phase 3 — Server Write Path & State Machine | Complete |
+| JOIN-03 | Phase 3 — Server Write Path & State Machine | Complete |
 | HOST-01 | Phase 3 — Server Write Path & State Machine | Complete |
 | HOST-02 | Phase 3 — Server Write Path & State Machine | Complete |
 | HOST-03 | Phase 3 — Server Write Path & State Machine | Complete |
