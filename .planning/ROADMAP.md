@@ -105,7 +105,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 2** *(blocked on 03-01)*
 
   - [x] 03-03-PLAN.md — Host state machine: POST /api/host/transition (host-auth + D-07 CAS for start/lock/next/end + per-transition broadcast)
-  - [ ] 03-04-PLAN.md — Reveal + scoring + round reset: POST /api/host/reveal (correct_option + idempotent recompute + broadcast) + POST /api/host/reset (surgical D-08 round reset)
+  - [x] 03-04-PLAN.md — Reveal + scoring + round reset: POST /api/host/reveal (correct_option + idempotent recompute + broadcast) + POST /api/host/reset (surgical D-08 round reset)
 
 **Wave 3** *(blocked on 03-01, 03-04)*
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundation & Schema | 0/3 | Planned | - |
 | 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
-| 3. Server Write Path & State Machine | 3/5 | In Progress|  |
+| 3. Server Write Path & State Machine | 4/5 | In Progress|  |
 | 4. Host Dashboard | 0/TBD | Not started | - |
 | 5. Guest App | 0/TBD | Not started | - |
 | 6. TV Display Mode | 0/TBD | Not started | - |
