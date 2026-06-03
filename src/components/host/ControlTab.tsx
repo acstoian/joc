@@ -31,9 +31,9 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { PhaseButton } from "@/components/host/PhaseButton";
 import { EmergencyPanel } from "@/components/host/EmergencyPanel";
+import { DistributionBar } from "@/components/host/DistributionBar";
 import { hostFetch } from "@/lib/host/constants";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
-import { motion } from "motion/react";
 
 // ── Shared props contract (from Plan 01 DashboardShell) ───────────────────────
 
@@ -95,58 +95,6 @@ function PhaseBadge({ phase }: { phase: string | null | undefined }) {
     <Badge className={`text-xs font-semibold border-0 ${colorClass}`}>
       {PHASE_LABELS[phase] ?? phase}
     </Badge>
-  );
-}
-
-// ── Distribution bar ──────────────────────────────────────────────────────────
-
-function DistributionBar({
-  distribution,
-}: {
-  distribution: { A: number; B: number } | null;
-}) {
-  if (!distribution) {
-    return (
-      <p className="text-xs text-champagne-dim/60">Niciun raspuns inca.</p>
-    );
-  }
-
-  const total = distribution.A + distribution.B;
-  const widthA = total === 0 ? 50 : Math.round((distribution.A / total) * 100);
-  const widthB = 100 - widthA;
-
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-champagne-dim/60">
-        <span>A: {distribution.A}</span>
-        <span>B: {distribution.B}</span>
-      </div>
-      {/* Animated A/B split bar (UI-SPEC §9, PATTERNS.md DistributionBar) */}
-      {/* Single track: A fills from the left, B fills the remainder */}
-      <div
-        className="relative h-2 w-full overflow-hidden rounded-full bg-ink-muted"
-        role="meter"
-        aria-valuenow={total}
-        aria-valuemin={0}
-        aria-valuemax={total}
-        aria-label={`Distributie raspunsuri: A ${distribution.A}, B ${distribution.B}`}
-      >
-        {/* A segment — left-anchored gold bar */}
-        <motion.div
-          className="absolute left-0 top-0 h-full bg-gold"
-          animate={{ width: `${widthA}%` }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          aria-hidden="true"
-        />
-        {/* B segment — right-anchored blush bar (fills after A) */}
-        <motion.div
-          className="absolute right-0 top-0 h-full bg-blush"
-          animate={{ width: `${widthB}%` }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          aria-hidden="true"
-        />
-      </div>
-    </div>
   );
 }
 
@@ -318,7 +266,11 @@ export function ControlTab({
 
         {/* A/B distribution bar */}
         <div className="mt-4">
-          <DistributionBar distribution={state?.distribution ?? null} />
+          {state?.distribution ? (
+            <DistributionBar a={state.distribution.A} b={state.distribution.B} />
+          ) : (
+            <p className="text-xs text-champagne-dim/60">Niciun raspuns inca.</p>
+          )}
         </div>
       </div>
 
