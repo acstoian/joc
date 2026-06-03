@@ -144,10 +144,14 @@ export function useHostQuestions(
       }
     ): Promise<HostQuestion | null> => {
       try {
-        const res = await hostFetch(`/api/host/questions/${id}`, password, {
-          method: "PUT",
-          body: JSON.stringify(fields),
-        });
+        const res = await hostFetch(
+          `/api/host/questions/${id}?gameId=${gameId}`,
+          password,
+          {
+            method: "PUT",
+            body: JSON.stringify(fields),
+          }
+        );
         if (res.ok) {
           const data = (await res.json()) as { question: HostQuestion };
           await refetch();
@@ -161,7 +165,7 @@ export function useHostQuestions(
         return null;
       }
     },
-    [password, refetch]
+    [gameId, password, refetch]
   );
 
   // ── remove — DELETE /api/host/questions/[id]?gameId= ─────────────────────

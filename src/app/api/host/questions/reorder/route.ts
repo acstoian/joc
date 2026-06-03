@@ -54,7 +54,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
   // Concurrent updates — acceptable at ≤50 questions (T-04-11, RESEARCH.md RQ-2).
   // Both .eq("id") and .eq("game_id") prevent cross-game tampering.
-  await Promise.all(
+  // WR-01: inspect every result; a failed UPDATE must surface as 500, not a
+  // misleading { ok: true }.
+  const results = await Promise.all(
     (order as string[]).map((questionId, index) =>
       adminClient
         .from("questions")
@@ -63,6 +65,12 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
         .eq("game_id", gameId)
     )
   );
+
+  const failed = results.find((r) => r.error);
+  if (failed?.error) {
+    console.error("[questions:reorder] update failed:", failed.error.message);
+    return NextResponse.json({ error: "reorder_failed" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

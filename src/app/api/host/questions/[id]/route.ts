@@ -42,6 +42,14 @@ export async function PUT(
     return NextResponse.json({ error: "invalid id" }, { status: 400 });
   }
 
+  // CR-01: scope the update to the owning game so a host cannot overwrite a
+  // question from another game by UUID. gameId comes from the query string
+  // (the hook appends ?gameId=), matching the DELETE handler's contract.
+  const gameId = req.nextUrl.searchParams.get("gameId");
+  if (!isValidUuid(gameId)) {
+    return NextResponse.json({ error: "gameId required" }, { status: 400 });
+  }
+
   // Parse + validate request body
   let body: unknown;
   try {
@@ -100,13 +108,13 @@ export async function PUT(
     .from("questions")
     .update(updatePayload)
     .eq("id", id)
+    .eq("game_id", gameId)
     .select("id, body, option_a, option_b, correct_option, display_order, created_at");
 
   if (updateError) {
-    return NextResponse.json(
-      { error: "update_failed", detail: updateError.message },
-      { status: 500 }
-    );
+    // CR-03: log the raw DB error server-side; never leak it to the client.
+    console.error("[questions:PUT] update failed:", updateError.message);
+    return NextResponse.json({ error: "update_failed" }, { status: 500 });
   }
 
   if (!updated || updated.length === 0) {
@@ -163,10 +171,8 @@ export async function DELETE(
     .eq("game_id", gameId);
 
   if (deleteError) {
-    return NextResponse.json(
-      { error: "delete_failed", detail: deleteError.message },
-      { status: 500 }
-    );
+    console.error("[questions:DELETE] delete failed:", deleteError.message);
+    return NextResponse.json({ error: "delete_failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

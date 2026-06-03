@@ -126,10 +126,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .select("phase");
 
     if (fUpdateError) {
-      return NextResponse.json(
-        { error: "transition_failed", detail: fUpdateError.message },
-        { status: 500 }
-      );
+      console.error("[transition:force_end] update failed:", fUpdateError.message);
+      return NextResponse.json({ error: "transition_failed" }, { status: 500 });
     }
 
     // 0 rows = another request ended it first — idempotent no-op

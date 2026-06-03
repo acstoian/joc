@@ -59,10 +59,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .eq("question_id", questionId);
 
   if (error) {
-    return NextResponse.json(
-      { error: "answers_fetch_failed", detail: error.message },
-      { status: 500 }
-    );
+    console.error("[host:answers] fetch failed:", error.message);
+    return NextResponse.json({ error: "answers_fetch_failed" }, { status: 500 });
   }
 
   const result: { A: string[]; B: string[] } = { A: [], B: [] };

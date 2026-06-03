@@ -42,7 +42,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .order("display_order", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[questions:GET] list failed:", error.message);
+    return NextResponse.json({ error: "list_failed" }, { status: 500 });
   }
 
   return NextResponse.json({ questions: data ?? [] });
@@ -117,10 +118,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .single();
 
   if (insertError || !created) {
-    return NextResponse.json(
-      { error: "insert_failed", detail: insertError?.message },
-      { status: 500 }
-    );
+    console.error("[questions:POST] insert failed:", insertError?.message);
+    return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
 
   return NextResponse.json({ question: created }, { status: 201 });
