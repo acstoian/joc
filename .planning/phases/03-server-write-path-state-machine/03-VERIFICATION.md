@@ -1,8 +1,8 @@
 ---
 phase: 03-server-write-path-state-machine
 verified: 2026-06-03T04:39:11Z
-status: human_needed
-score: 4/5 must-haves verified by static analysis; SC5 runtime blocked by unpushed migration
+status: passed
+score: 5/5 success criteria runtime-verified via live smoke test (2026-06-03, 18/18 assertions). Migration 0004 pushed. Note — HOST_PASSWORD empty in .env.local (config gap, tracked in 03-HUMAN-UAT.md Gaps).
 human_verification:
   - test: "Push migration 0004 to live Supabase DB and confirm recompute_scores RPC exists"
     expected: "SELECT proname FROM pg_proc WHERE proname = 'recompute_scores' returns exactly 1 row after `supabase db push`"
