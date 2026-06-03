@@ -118,11 +118,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Insert answer with the server-resolved player_id and current_question_id.
   // The UNIQUE(player_id, question_id) constraint rejects duplicates atomically.
   // error.code === "23505" = PostgreSQL unique_violation SQLSTATE.
-  const { error: insertError } = await adminClient
+  //
+  // Capture the question_id this insert was bound to (the snapshot from step 1)
+  // so the WR-01 re-check below can confirm the round did not advance underneath us.
+  const answeredQuestionId = game.current_question_id!;
+
+  const { data: inserted, error: insertError } = await adminClient
     .from("answers")
     .insert({
       player_id: player.id,
-      question_id: game.current_question_id!,
+      question_id: answeredQuestionId,
       choice,
     })
     .select("id")
@@ -140,6 +145,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       { error: "answer_failed", detail: insertError.message },
       { status: 500 }
+    );
+  }
+
+  // ── WR-01: close the check-then-insert race ───────────────────────────────
+  // The phase guard above is a check-then-insert: a concurrent host `lock`
+  // can flip phase 'question' -> 'locked' (and/or advance current_question_id)
+  // between the step-1 read and this insert, letting a late answer slip in.
+  // PostgREST has no conditional-insert primitive, so we re-read the game AFTER
+  // the insert and reject if the round moved: the host's lock UPDATE and this
+  // re-read serialize at the DB, so a lock that committed before our read is
+  // always observed here. If the round advanced, delete the just-inserted row
+  // (compensating action) so no answer is counted under a locked/changed round.
+  const { data: gameAfter } = await adminClient
+    .from("games")
+    .select("phase, current_question_id")
+    .eq("id", gameId)
+    .single();
+
+  if (
+    !gameAfter ||
+    gameAfter.phase !== "question" ||
+    gameAfter.current_question_id !== answeredQuestionId
+  ) {
+    // Round advanced concurrently — undo the late insert and report locked.
+    if (inserted?.id) {
+      await adminClient.from("answers").delete().eq("id", inserted.id);
+    }
+    return NextResponse.json(
+      { error: "answers_locked", phase: gameAfter?.phase ?? "locked" },
+      { status: 403 }
     );
   }
 
