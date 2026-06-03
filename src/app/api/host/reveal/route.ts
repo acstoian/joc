@@ -84,10 +84,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   //   (a) Already revealed — idempotent re-reveal is allowed (D-09 guarantees no double-count)
   //   (b) Not in locked state — illegal transition
   //   (c) In locked state — proceed with CAS
-  if (game.phase === "revealed") {
-    // Idempotent re-reveal: proceed through steps 2–4 with identical semantics.
-    // Do NOT return early — we must still set correct_option + recompute + broadcast.
-  } else if (game.phase !== "locked") {
+  if (game.phase !== "locked" && game.phase !== "revealed") {
     return NextResponse.json(
       {
         error: "invalid_transition",
@@ -96,8 +93,70 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
       { status: 409 }
     );
-  } else {
-    // CAS: locked → revealed (only advance phase if still locked)
+  }
+
+  // ── Step 2: Set correct_option FIRST (CR-02 fix) ──────────────────────────
+  // CR-02: correct_option MUST be written before the phase is flipped to
+  // 'revealed'. Doing it afterwards created a window where phase === 'revealed'
+  // but correct_option === NULL, causing a blank reveal flash on some clients.
+  // Same ordering applies to re-reveal: write the new answer first, then
+  // recompute scores, then flip (or confirm) the phase.
+  //
+  // Uses base `questions` table via adminClient (adminClient bypasses RLS).
+  // `questions_public` view omits correct_option by design — never use it here.
+  // The UPDATE must overwrite any prior value so reset+re-reveal works correctly.
+  const { error: optionError } = await adminClient
+    .from("questions")
+    .update({ correct_option: choice })
+    .eq("id", game.current_question_id);
+
+  if (optionError) {
+    return NextResponse.json(
+      { error: "reveal_failed", detail: optionError.message },
+      { status: 500 }
+    );
+  }
+
+  // ── Step 3: Idempotent score recompute via RPC (D-09, SCOR-01) ────────────
+  // recompute_scores counts each player's correct answers from scratch across all
+  // revealed questions (correct_option IS NOT NULL). ON CONFLICT replaces — never
+  // increments — so re-reveal or reset+re-reveal can never double-count (Pitfall 4).
+  //
+  // CR-02: scores are recomputed BEFORE the phase is flipped so the leaderboard
+  // is consistent at the moment phase becomes 'revealed'. Safe because
+  // recompute_scores is idempotent — it reads from correct_option (just written
+  // in step 2) and replaces the scores table atomically via ON CONFLICT DO UPDATE.
+  //
+  // IMPORTANT: migration 0004_recompute_scores.sql must be pushed to the live DB.
+  // Best-effort: scoreError logged but does NOT fail the reveal (T-03-16).
+  //
+  // CR-05: recompute_scores is absent from the generated database.ts Functions
+  // map (migration 0004 is committed but not yet pushed, so `gen types` has not
+  // picked it up — only reset_game is present). Rather than a bare `as any`,
+  // cast adminClient.rpc through a narrow, accurate signature so the function
+  // name and the args shape are still type-checked at this call site.
+  // TODO(migration-0004): drop this cast after `supabase db push` + `gen types`
+  // regenerates database.ts with recompute_scores in public.Functions.
+  type RecomputeScoresRpc = (
+    fn: "recompute_scores",
+    args: { p_game_id: string }
+  ) => Promise<{ error: { message: string } | null }>;
+  const recomputeScores = adminClient.rpc as unknown as RecomputeScoresRpc;
+  const { error: scoreError } = await recomputeScores("recompute_scores", {
+    p_game_id: gameId,
+  });
+  if (scoreError) {
+    console.error("[reveal] recompute_scores RPC failed:", scoreError);
+    // Best-effort — scores re-computable on next reveal; proceed with broadcast
+  }
+
+  // ── Step 3b: CAS phase flip locked → revealed (CR-02 fix) ─────────────────
+  // Only attempt the flip when starting from 'locked'. Re-reveal (already
+  // 'revealed') skips this entirely — phase is already correct, no flip needed.
+  // correct_option and scores are fully written before this flip so any
+  // concurrent GET /api/game/state that lands after this point sees a fully
+  // consistent state (no null-reveal window).
+  if (game.phase === "locked") {
     const { data: updated, error: updateError } = await adminClient
       .from("games")
       .update({ phase: "revealed" })
@@ -112,44 +171,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // 0 rows = lost the race (another request already revealed) — treat as idempotent
+    // 0 rows = lost the CAS race (another request already revealed first).
+    // correct_option + scores are already written — this is safe to treat as
+    // a no-op; the winning request's phase flip is the canonical one.
     if (!updated || updated.length === 0) {
-      // Phase has changed — proceed anyway (another reveal beat us; correct_option
-      // may already be set, but recomputing scores + broadcasting is still safe)
+      // Proceed to broadcast — state is consistent regardless of which request won
     }
-  }
-
-  // ── Step 2: Set correct_option UNCONDITIONALLY (Pitfall 5) ────────────────
-  // Uses base `questions` table via adminClient (adminClient bypasses RLS).
-  // `questions_public` view omits correct_option by design — never use it here.
-  // The UPDATE must overwrite any prior value so reset+re-reveal works correctly.
-  const { error: updateError } = await adminClient
-    .from("questions")
-    .update({ correct_option: choice })
-    .eq("id", game.current_question_id);
-
-  if (updateError) {
-    return NextResponse.json(
-      { error: "reveal_failed", detail: updateError.message },
-      { status: 500 }
-    );
-  }
-
-  // ── Step 3: Idempotent score recompute via RPC (D-09, SCOR-01) ────────────
-  // recompute_scores counts each player's correct answers from scratch across all
-  // revealed questions (correct_option IS NOT NULL). ON CONFLICT replaces — never
-  // increments — so re-reveal or reset+re-reveal can never double-count (Pitfall 4).
-  //
-  // IMPORTANT: migration 0004_recompute_scores.sql must be pushed to the live DB.
-  // Best-effort: scoreError logged but does NOT fail the reveal (T-03-16).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: scoreError } = await (adminClient as any).rpc(
-    "recompute_scores",
-    { p_game_id: gameId }
-  );
-  if (scoreError) {
-    console.error("[reveal] recompute_scores RPC failed:", scoreError);
-    // Best-effort — scores re-computable on next reveal; proceed with broadcast
   }
 
   // ── Step 4: Best-effort broadcast (D-01/D-06, T-03-16) ────────────────────
