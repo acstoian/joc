@@ -36,9 +36,11 @@ export type SyncStatus = "connecting" | "connected" | "reconnecting" | "error";
 // Also imported (type-only) by src/app/api/game/state/route.ts — do not rename
 // fields or remove exports without updating that route.
 //
-// Stub fields (null in Phase 2):
+// Phase 2 stub fields now populated by Phase 3 (HOST-04/SCOR-02):
 //   myAnswer      — Phase 3 (JOIN-02/03) populates from player's recorded answer
 //   correctOption — Phase 3 (HOST-04) populates after phase === "revealed"
+//   distribution  — Phase 3 populates when phase is "locked" or "revealed"
+//   leaderboard   — Phase 3 populates when phase is not "lobby"
 export type GameStateSnapshot = {
   phase: "lobby" | "question" | "locked" | "revealed" | "ended";
   currentQuestionId: string | null;
@@ -48,8 +50,10 @@ export type GameStateSnapshot = {
     optionA: string;
     optionB: string;
   } | null;
-  myAnswer: "A" | "B" | null;       // null — Phase 3 populates
-  correctOption: "A" | "B" | null;  // null — Phase 3 populates
+  myAnswer: "A" | "B" | null;
+  correctOption: "A" | "B" | null;                    // populated when phase === 'revealed'
+  distribution: { A: number; B: number } | null;      // populated when locked/revealed
+  leaderboard: { name: string; score: number }[];     // populated when phase !== 'lobby'
 };
 
 /**

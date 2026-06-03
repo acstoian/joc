@@ -118,7 +118,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // correctOption: Phase 2 stub — null always.
   // Phase 3's reveal write path will populate questions.correct_option and
   // this endpoint will be updated to return it when phase === 'revealed'.
-  const correctOption: "A" | "B" | null = null; // stub — Phase 3 will fill
+  const correctOption: "A" | "B" | null = null; // stub — Plan 05 will fill
+
+  // distribution + leaderboard: Phase 3 stubs — populated by Plan 05 (state route extension).
+  // Added here to satisfy the widened GameStateSnapshot type contract (D-02).
+  const distribution: { A: number; B: number } | null = null; // stub — Plan 05 will fill
+  const leaderboard: { name: string; score: number }[] = []; // stub — Plan 05 will fill
 
   const snapshot: GameStateSnapshot = {
     phase: game.phase as GameStateSnapshot["phase"],
@@ -126,6 +131,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     currentQuestion,
     myAnswer,
     correctOption,
+    distribution,
+    leaderboard,
   };
 
   return NextResponse.json(snapshot);
