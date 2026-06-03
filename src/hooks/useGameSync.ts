@@ -94,8 +94,15 @@ export function useGameSync(
       const res = await fetch(
         `/api/game/state?gameId=${gameId}&playerId=${playerId}`
       );
+      // WR-03: guard after each async boundary. fetchState is invoked from the
+      // visibilitychange handler and the SUBSCRIBED callback, both of which can
+      // resolve after the component has unmounted (or after [gameId, playerId]
+      // changed). Without these checks, setState would run on an unmounted
+      // component — a React warning and a potential leak.
+      if (cancelled) return;
       if (res.ok) {
         const data: GameStateSnapshot = await res.json();
+        if (cancelled) return;
         setState(data);
       }
     };
