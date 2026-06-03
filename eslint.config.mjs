@@ -10,6 +10,13 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    // Global ignores — build output and stray git worktrees must never be linted.
+    ignores: [
+      "**/.next/**",
+      ".claude/worktrees/**",
+    ],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
 
