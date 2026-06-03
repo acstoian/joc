@@ -42,16 +42,20 @@ function isValidUuid(value: unknown): value is string {
 }
 
 // ── Action → phase-transition map ─────────────────────────────────────────────
-type Action = "start" | "lock" | "next" | "end";
+// StandardAction routes through the single-expectedFrom TRANSITIONS map.
+// `force_end` (HOST-11, decision #4) is valid from ANY non-ended phase, so it is
+// NOT in TRANSITIONS — it is branched specially before the map lookup below.
+type StandardAction = "start" | "lock" | "next" | "end";
+type Action = StandardAction | "force_end";
 
-const TRANSITIONS: Record<Action, { expectedFrom: string; target: string }> = {
+const TRANSITIONS: Record<StandardAction, { expectedFrom: string; target: string }> = {
   start: { expectedFrom: "lobby",    target: "question" },
   lock:  { expectedFrom: "question", target: "locked"   },
   next:  { expectedFrom: "revealed", target: "question" },
   end:   { expectedFrom: "revealed", target: "ended"    },
 };
 
-const VALID_ACTIONS = new Set<Action>(["start", "lock", "next", "end"]);
+const VALID_ACTIONS = new Set<Action>(["start", "lock", "next", "end", "force_end"]);
 
 function isValidAction(v: unknown): v is Action {
   return typeof v === "string" && VALID_ACTIONS.has(v as Action);
@@ -91,6 +95,59 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { error: "nextQuestionId required for action 'next'" },
       { status: 400 }
     );
+  }
+
+  // ── force_end: end the game from ANY non-ended phase (HOST-11, SC5) ────────
+  // Not routed through TRANSITIONS (which has a single expectedFrom). Uses a
+  // CAS-style guard `.neq("phase","ended")` so concurrent transitions converge:
+  // 0 rows → idempotent noop (T-04-16). Reuses the existing GAME_ENDED event —
+  // no new GameEvent union member. The normal `end` action is untouched.
+  if (action === "force_end") {
+    const { data: fgame, error: fgameError } = await adminClient
+      .from("games")
+      .select("phase, current_question_id")
+      .eq("id", gameId)
+      .single();
+
+    if (fgameError || !fgame) {
+      return NextResponse.json({ error: "game_not_found" }, { status: 404 });
+    }
+
+    // Already ended — idempotent no-op
+    if (fgame.phase === "ended") {
+      return NextResponse.json({ noop: true, state: fgame }, { status: 200 });
+    }
+
+    const { data: fUpdated, error: fUpdateError } = await adminClient
+      .from("games")
+      .update({ phase: "ended" })
+      .eq("id", gameId)
+      .neq("phase", "ended")
+      .select("phase");
+
+    if (fUpdateError) {
+      return NextResponse.json(
+        { error: "transition_failed", detail: fUpdateError.message },
+        { status: 500 }
+      );
+    }
+
+    // 0 rows = another request ended it first — idempotent no-op
+    if (!fUpdated || fUpdated.length === 0) {
+      return NextResponse.json({ noop: true }, { status: 200 });
+    }
+
+    try {
+      await broadcast(`game:${gameId}`, "GAME_EVENT", {
+        type: "GAME_ENDED",
+        gameId,
+      } satisfies GameEvent as Record<string, unknown>);
+    } catch (err) {
+      console.error("[broadcast] force_end broadcast failed:", err);
+      // Best-effort — DB write already succeeded
+    }
+
+    return NextResponse.json({ ok: true, phase: "ended" }, { status: 200 });
   }
 
   const { expectedFrom, target } = TRANSITIONS[action];
