@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Foundation & Schema** - Next.js scaffold, Supabase Pro setup, full DB schema with constraints + RLS + key isolation
 - [x] **Phase 2: Realtime Core** - Broadcast channel, useGameSync hook, subscribe-then-fetch, full reconnect resilience (completed 2026-06-02)
 - [x] **Phase 3: Server Write Path & State Machine** - All API routes (join, answer, host transitions, reveal + scoring), anti-cheat, compare-and-swap (completed 2026-06-03)
-- [ ] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery
+- [x] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery (completed 2026-06-03)
 - [ ] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views
 - [ ] **Phase 6: TV Display Mode** - /display cinematic landscape route with all screens and host-initiated countdown
 - [ ] **Phase 7: Polish & Pre-Event Hardening** - Wedding aesthetic, animation audit, performance validation, mandatory dry run
@@ -127,7 +127,26 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The phase control buttons (Start, Lock Answers, Reveal, Next Question, End Game) are enabled only when valid for the current phase; clicking a button while a request is in-flight disables it until the Broadcast confirms the new state
   5. The emergency recovery panel allows the host to reset the current round (clear answers + return to 'question' phase), jump to any question by number, or force-end the game from any state — each action takes effect and broadcasts within 2 seconds
 
-**Plans**: TBD
+**Plans**: 5 plans (+ 1 gap-closure)
+
+**Wave 1**
+
+  - [x] 04-01-PLAN.md — Setup + gate/shell slice: shadcn primitives, host constants (GAME_ID/sentinel/hostFetch), useHostAuth, /host gate + three-tab shell (SC1)
+
+**Wave 2** *(blocked on 04-01)*
+
+  - [x] 04-02-PLAN.md — Control tab: PhaseButton + phase machine driving transition/reveal with Broadcast-confirmed in-flight disable (SC4)
+  - [x] 04-03-PLAN.md — Question CRUD API + useHostQuestions + inline edit-in-list Questions tab (QSTN-01..05, SC2)
+  - [x] 04-04-PLAN.md — Stats slice: GET /api/host/answers + useHostAnswerNames + DistributionBar + Stats tab (HOST-08/09/10, SC3)
+
+**Wave 3** *(blocked on 04-02, 04-03)*
+
+  - [x] 04-05-PLAN.md — Emergency recovery: force_end transition action + EmergencyPanel (reset/jump/force-end) wired into Control tab (HOST-11, SC5)
+
+**Gap Closure** *(post-UAT, closes GAP-04-01)*
+
+  - [ ] 04-06-PLAN.md — Return-to-lobby recovery: `reset_game` transition action (calls existing reset_game RPC) + "Joc Nou / Reseteaza Jocul" control in EmergencyPanel; reuses GAME_ENDED for resync (HOST-11)
+
 **UI hint**: yes
 
 ### Phase 5: Guest App
@@ -189,7 +208,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation & Schema | 0/3 | Planned | - |
 | 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
 | 3. Server Write Path & State Machine | 5/5 | Complete    | 2026-06-03 |
-| 4. Host Dashboard | 0/TBD | Not started | - |
+| 4. Host Dashboard | 5/6 | Gap closure | 2026-06-03 |
 | 5. Guest App | 0/TBD | Not started | - |
 | 6. TV Display Mode | 0/TBD | Not started | - |
 | 7. Polish & Pre-Event Hardening | 0/TBD | Not started | - |
