@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Realtime Core** - Broadcast channel, useGameSync hook, subscribe-then-fetch, full reconnect resilience (completed 2026-06-02)
 - [x] **Phase 3: Server Write Path & State Machine** - All API routes (join, answer, host transitions, reveal + scoring), anti-cheat, compare-and-swap (completed 2026-06-03)
 - [x] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery (completed 2026-06-03)
-- [ ] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views
+- [x] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views (completed 2026-06-04)
 - [ ] **Phase 6: TV Display Mode** - /display cinematic landscape route with all screens and host-initiated countdown
 - [ ] **Phase 7: Polish & Pre-Event Hardening** - Wedding aesthetic, animation audit, performance validation, mandatory dry run
 
@@ -167,12 +167,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-  - [ ] 05-01-PLAN.md — Foundation + Join→Lobby slice: env+packages, identity helpers, SyncStatusBadge, LeaderboardPanel, NameGate, LobbyScreen+QR, GuestShell phase switch (JOIN-04, JOIN-05)
+  - [x] 05-01-PLAN.md — Foundation + Join→Lobby slice: env+packages, identity helpers, SyncStatusBadge, LeaderboardPanel, NameGate, LobbyScreen+QR, GuestShell phase switch (JOIN-04, JOIN-05)
 
 **Wave 2** *(blocked on 05-01)*
 
-  - [ ] 05-02-PLAN.md — Play slice: QuestionScreen A/B tap + optimistic lock + RevealScreen in-place feedback + distribution (PLAY-01..05)
-  - [ ] 05-03-PLAN.md — Winner slice: WinnerScreen #1 featured + full leaderboard + one-shot confetti (PLAY-06, PLAY-07)
+  - [x] 05-02-PLAN.md — Play slice: QuestionScreen A/B tap + optimistic lock + RevealScreen in-place feedback + distribution (PLAY-01..05)
+  - [x] 05-03-PLAN.md — Winner slice: WinnerScreen #1 featured + full leaderboard + one-shot confetti (PLAY-06, PLAY-07)
 
 **UI hint**: yes
 
@@ -219,6 +219,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
 | 3. Server Write Path & State Machine | 5/5 | Complete    | 2026-06-03 |
 | 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
-| 5. Guest App | 0/3 | Planned | - |
+| 5. Guest App | 3/3 | Complete   | 2026-06-04 |
 | 6. TV Display Mode | 0/TBD | Not started | - |
 | 7. Polish & Pre-Event Hardening | 0/TBD | Not started | - |
