@@ -145,7 +145,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Gap Closure** *(post-UAT, closes GAP-04-01)*
 
-  - [ ] 04-06-PLAN.md — Return-to-lobby recovery: `reset_game` transition action (calls existing reset_game RPC) + "Joc Nou / Reseteaza Jocul" control in EmergencyPanel; reuses GAME_ENDED for resync (HOST-11)
+  - [x] 04-06-PLAN.md — Return-to-lobby recovery: `reset_game` transition action (calls existing reset_game RPC) + "Joc Nou / Reseteaza Jocul" control in EmergencyPanel; reuses GAME_ENDED for resync (HOST-11)
 
 **UI hint**: yes
 
@@ -163,7 +163,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. When the host reveals, the guest's screen shows whether they were correct or incorrect and the final A/B distribution, live — within 1 second of the host action
   5. A guest who refreshes or reconnects mid-game is re-linked to their existing player record and score via the device token and sees the current game state (correct phase, their locked answer if already submitted)
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [ ] 05-01-PLAN.md — Foundation + Join→Lobby slice: env+packages, identity helpers, SyncStatusBadge, LeaderboardPanel, NameGate, LobbyScreen+QR, GuestShell phase switch (JOIN-04, JOIN-05)
+
+**Wave 2** *(blocked on 05-01)*
+
+  - [ ] 05-02-PLAN.md — Play slice: QuestionScreen A/B tap + optimistic lock + RevealScreen in-place feedback + distribution (PLAY-01..05)
+  - [ ] 05-03-PLAN.md — Winner slice: WinnerScreen #1 featured + full leaderboard + one-shot confetti (PLAY-06, PLAY-07)
+
 **UI hint**: yes
 
 ### Phase 6: TV Display Mode
@@ -208,7 +218,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation & Schema | 0/3 | Planned | - |
 | 2. Realtime Core | 3/3 | Complete    | 2026-06-02 |
 | 3. Server Write Path & State Machine | 5/5 | Complete    | 2026-06-03 |
-| 4. Host Dashboard | 5/6 | Gap closure | 2026-06-03 |
-| 5. Guest App | 0/TBD | Not started | - |
+| 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
+| 5. Guest App | 0/3 | Planned | - |
 | 6. TV Display Mode | 0/TBD | Not started | - |
 | 7. Polish & Pre-Event Hardening | 0/TBD | Not started | - |
