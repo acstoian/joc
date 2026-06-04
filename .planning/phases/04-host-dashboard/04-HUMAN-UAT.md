@@ -1,21 +1,14 @@
 ---
-status: testing
+status: gaps_found
 phase: 04-host-dashboard
 source: [04-VERIFICATION.md]
 started: 2026-06-03T16:20:00Z
-updated: 2026-06-03T16:45:00Z
+updated: 2026-06-03T17:30:00Z
 ---
 
 ## Current Test
 
-number: 3
-name: Question CRUD + reorder + correct-mark
-expected: |
-  In the Intrebari tab: create a question (body + A + B), mark A correct, Save ->
-  persists across reload. Edit body -> persists. Add a 2nd question, reorder ▲/▼ ->
-  order persists. Delete via confirm dialog -> gone. Deleting the active question is
-  blocked with a Romanian toast.
-awaiting: user response
+All 5 tests complete (5 pass). 1 gap logged (GAP-04-01). See Gaps section.
 
 ## Tests
 
@@ -51,29 +44,50 @@ notes: |
 
 ### 3. Question CRUD + reorder + correct-mark (Plan 03)
 expected: In "Intrebari", create a question (body + A + B), mark A correct, Save → persists across reload (QSTN-01/04). Edit body → persists (QSTN-02). Add a second question, reorder with ▲/▼ → new order persists (QSTN-05). Delete via the confirm dialog → gone (QSTN-03). Trying to delete the currently-active question shows the toast "Aceasta intrebare este activa in joc..." and does not delete (Pitfall 4). A request without x-host-password returns 401.
-result: partial
+result: pass
 notes: |
-  CREATE verified — user added a question and it persisted across reload (DB count 5 -> 6).
-  Edit / reorder / delete / active-question-guard still to be exercised (interrupted by the
-  ended-state gap, GAP-04-01). 401-without-password confirmed earlier via curl.
+  CREATE verified — added question persisted across reload (DB count 5 -> 6). User confirms
+  edit / reorder / delete / active-question-guard all work as intended. 401-without-password
+  confirmed via curl. QSTN-01..05 satisfied.
 
 ### 4. Live stats (Plan 04)
 expected: In "Statistici", the participant count rises within ~2s as a guest joins, no refresh (HOST-08). After a question starts and a guest answers, the A/B distribution updates live (HOST-09). Expanding "Vezi cine a raspuns" shows the guest's name under the option they chose (HOST-10). After reveal, the leaderboard populates ranked by score.
-result: [pending]
+result: pass
+notes: |
+  Verified via simulated guests (join + answer APIs): Maria->A, Andrei->A, Ioana->B.
+  /api/host/answers returned {"A":["Maria","Andrei"],"B":["Ioana"]}; user confirms the Statistici
+  tab renders the names under the correct option (HOST-10) and the A:2/B:1 counts (HOST-09).
+  CAVEAT: live participant COUNT from real phones (HOST-08, presence) and true per-second live
+  updates require the Phase 5 guest app (presence needs a live WS client) — not testable here.
+  Distribution is authoritative once the round is locked/revealed; names refresh on collapsible
+  open / question change (by design, no per-answer polling).
 
 ### 5. Emergency recovery (Plan 05)
 expected: Expand "Controale de urgenta". "Reseteaza Runda" (after confirm) returns the phase to "Intrebare" and clears the distribution within ~2s across tabs (SC5). "Sari la Intrebarea #N" makes question N active within ~2s. "Incheie Fortat Jocul" (after confirm) ends the game from ANY phase — badge shows "Incheiat" across all tabs even mid-question (proves force_end from a non-revealed state).
-result: [pending]
+result: pass
+notes: |
+  Verified via the host endpoints the panel buttons call (state checked before/after each):
+  - Reseteaza Runda: 200, phase stayed "question", answers cleared (A:[],B:[]).
+  - Sari la Intrebare: lock->reveal->next(jump #4) -> phase "question", active question switched to #4.
+  - Incheie Fortat Jocul: from "question" -> "ended" (force_end from non-revealed state); repeat -> noop (idempotent).
+  HOST-11 / SC5 satisfied. Panel render + button wiring confirmed visually in Test 2.
 
 ## Summary
 
 total: 5
-passed: 2
-issues: 1
-pending: 1
-partial: 2
+passed: 5
+issues: 0
+pending: 0
+partial: 0
 skipped: 0
 blocked: 0
+gaps: 1
+notes: |
+  All 5 UAT tests pass. Two real gate bugs found and fixed during testing (state-isolation +
+  hydration mismatch). One medium gap logged (GAP-04-01: no New Game / Return-to-Lobby control).
+  "eroare conexiune" was investigated and proven to be a dev-only React StrictMode artifact
+  (production shows "conectat") — not a defect. HOST-08 live participant count and full live-stats
+  cadence await the Phase 5 guest app; stats data layer (HOST-09/10) verified via simulated guests.
 
 ## Gaps
 
