@@ -3,15 +3,19 @@
 /**
  * EmergencyPanel — collapsible emergency recovery controls (Plan 04-05, HOST-11, SC5).
  *
- * Collapsed by default, visually subdued, red-bordered (UI-SPEC §5.3 C). Three controls:
+ * Collapsed by default, visually subdued, red-bordered (UI-SPEC §5.3 C). Four controls:
  *   1. Reseteaza Runda     → AlertDialog → POST /api/host/reset { gameId }
  *   2. Sari la Intrebarea #N → resolves 1-based N to the question id at that display_order
  *                              → POST /api/host/transition { gameId, action:"next", nextQuestionId }
  *   3. Incheie Fortat Jocul → AlertDialog → POST /api/host/transition { gameId, action:"force_end" }
+ *   4. Joc Nou / Reseteaza Jocul → AlertDialog → POST /api/host/transition { gameId, action:"reset_game" }
+ *      Whole-game wipe: all answers + scores cleared, returns to lobby. DISTINCT from #1
+ *      (Reseteaza Runda — round-only surgical reset that returns to question).
+ *      Closes GAP-04-01: from the ended phase the host now has a path to start a new game.
  *
- * Reset + force-end are guarded behind AlertDialog confirmations (T-04-17). Each action
- * shows a Romanian success or 4xx/5xx/409 error toast. The jump's `next` action requires
- * the revealed phase server-side; a 409 from a non-revealed phase surfaces the CAS toast.
+ * Reset + force-end + new-game are guarded behind AlertDialog confirmations (T-04-17/T-04-20).
+ * Each action shows a Romanian success or 4xx/5xx/409 error toast. The jump's `next` action
+ * requires the revealed phase server-side; a 409 from a non-revealed phase surfaces the CAS toast.
  * Only @theme tokens; all copy Romanian.
  */
 
@@ -103,6 +107,15 @@ export function EmergencyPanel({ gameId, password, questions }: EmergencyPanelPr
       "/api/host/transition",
       { gameId, action: "force_end" },
       "Jocul a fost incheiat."
+    );
+  }
+
+  function handleNewGame() {
+    void runAction(
+      "reset_game",
+      "/api/host/transition",
+      { gameId, action: "reset_game" },
+      "Jocul a fost resetat. Poti porni un joc nou."
     );
   }
 
@@ -241,6 +254,42 @@ export function EmergencyPanel({ gameId, password, questions }: EmergencyPanelPr
                   className="bg-red-500 text-white hover:bg-red-600"
                 >
                   Da, incheie
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* 4. Whole-game reset — returns to lobby from ANY phase (GAP-04-01, HOST-11) */}
+          {/* DISTINCT from "Reseteaza Runda" (#1) which is round-only and returns to question. */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={anyBusy}
+                className="w-full"
+              >
+                Joc Nou / Reseteaza Jocul
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="glass border-red-500/20">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-heading text-champagne">
+                  Resetezi tot jocul?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-champagne-dim">
+                  Toate raspunsurile si punctajele vor fi sterse, iar jocul revine
+                  in asteptare (lobby) pentru un joc nou. Aceasta actiune nu poate
+                  fi anulata.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Renunta</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleNewGame}
+                  className="bg-red-500 text-white hover:bg-red-600"
+                >
+                  Da, reseteaza jocul
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
