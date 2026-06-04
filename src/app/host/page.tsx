@@ -32,9 +32,22 @@ import { cn } from "@/lib/utils";
 /**
  * PasswordGate — shown when no host password is in sessionStorage (SC1, D-01a).
  * Centered card on bg-ink, max-w-[360px], Romanian copy per UI-SPEC §5.1/§7.
+ *
+ * Controlled by the parent's single useHostAuth() instance (login/error/checking
+ * passed as props). useHostAuth is a per-component hook — calling it here too would
+ * create an ISOLATED state instance, so a successful login would update only this
+ * instance and never the page-root instance that decides which view to render,
+ * leaving the user stuck on the gate. The single instance lives in HostPage.
  */
-function PasswordGate() {
-  const { error, checking, login } = useHostAuth();
+function PasswordGate({
+  login,
+  error,
+  checking,
+}: {
+  login: (pw: string) => Promise<void>;
+  error: string | null;
+  checking: boolean;
+}) {
   const [value, setValue] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -233,10 +246,21 @@ function DashboardShell({ password }: { password: string }) {
 // ── Page root ─────────────────────────────────────────────────────────────────
 
 export default function HostPage() {
-  const { password } = useHostAuth();
+  // Single source of truth for host auth. PasswordGate is controlled by this
+  // instance (props), so a successful login flips THIS password to non-null and
+  // the page swaps to the dashboard. (useHostAuth is a per-component hook — a
+  // second instance inside PasswordGate would not propagate here.)
+  const { password, hydrated, error, checking, login } = useHostAuth();
+
+  // Hold rendering until the client-only sessionStorage read completes. The
+  // server and the first client render both hit this branch (hydrated=false),
+  // so the hydrated HTML matches — no mismatch. Neutral bg-ink avoids a flash.
+  if (!hydrated) {
+    return <main className="min-h-dvh bg-ink" aria-hidden="true" />;
+  }
 
   if (password === null) {
-    return <PasswordGate />;
+    return <PasswordGate login={login} error={error} checking={checking} />;
   }
 
   return <DashboardShell password={password} />;

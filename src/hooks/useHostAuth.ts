@@ -23,21 +23,31 @@
  *   logout()  — clears sessionStorage and nulls password
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GAME_ID, SESSION_KEY } from "@/lib/host/constants";
 
 export function useHostAuth(): {
   password: string | null;
+  hydrated: boolean;
   error: string | null;
   checking: boolean;
   login: (pw: string) => Promise<void>;
   logout: () => void;
 } {
-  const [password, setPassword] = useState<string | null>(() =>
-    typeof window !== "undefined" ? sessionStorage.getItem(SESSION_KEY) : null
-  );
+  // Start null on BOTH the server and the client's first render so the SSR HTML
+  // and initial hydration match (the server has no sessionStorage). Reading
+  // sessionStorage in the initial useState() would diverge between server (null)
+  // and client (stored value) → hydration mismatch. `hydrated` lets the page hold
+  // its decision until the client-only read below completes.
+  const [password, setPassword] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    setPassword(sessionStorage.getItem(SESSION_KEY));
+    setHydrated(true);
+  }, []);
 
   async function login(pw: string): Promise<void> {
     setChecking(true);
@@ -67,5 +77,5 @@ export function useHostAuth(): {
     setPassword(null);
   }
 
-  return { password, error, checking, login, logout };
+  return { password, hydrated, error, checking, login, logout };
 }
