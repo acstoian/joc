@@ -1,117 +1,141 @@
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
+"use client";
 
 /**
- * Root page — Walking Skeleton READ
+ * GuestShell — root guest app entry point (D-01, D-07).
  *
- * Server Component that reads, via the typed anon client, the seeded game
- * row (phase) and a COUNT of rows in the questions_public VIEW (not the
- * base questions table — proving anon reads go through the secrecy view).
+ * Replaces the throwaway sync-demo Server Component. This is a single-page
+ * client component that:
+ *   1. Reads localStorage identity on mount (SSR-safe, hydrated guard)
+ *   2. Shows NameGate for first-time guests (identity === null) (D-03)
+ *   3. Mounts GameView for returning guests (identity present) — skips gate
  *
- * Values are fetched live from the cloud DB on every request — nothing is
- * hardcoded. Fetches are parallelized (vercel: async-parallel rule).
+ * GameView calls useGameSync EXACTLY ONCE and switches on state.phase (D-07).
+ * Screen components receive state/status/participantCount as PROPS — they
+ * never call useGameSync themselves (Pitfall 3 — no duplicate channels).
  *
- * Key isolation (D-13): anon key only — service_role key never used here.
+ * No routing segments, no AnimatePresence — Phase 5 uses simple conditional
+ * renders; Phase 7 adds animation polish (D-07).
+ *
+ * Security: no server-only imports; no service_role key; anon key only in client.
  */
 
-// Render at request time, never at build. The data is intentionally live on
-// every request, and this also stops the Vercel build from depending on the
-// DB/env being reachable at build time (a missing env at build would otherwise
-// throw in createClient and fail the whole production build → 404).
-export const dynamic = "force-dynamic";
+import { useEffect, useState } from "react";
+import { useGameSync } from "@/hooks/useGameSync";
+import { GAME_ID } from "@/lib/host/constants";
+import { getIdentity } from "@/lib/guest/identity";
+import { SyncStatusBadge } from "@/components/guest/SyncStatusBadge";
+import { NameGate } from "@/components/guest/NameGate";
+import { LobbyScreen } from "@/components/guest/LobbyScreen";
+import { QuestionScreen } from "@/components/guest/QuestionScreen";
+import { RevealScreen } from "@/components/guest/RevealScreen";
+import { WinnerScreen } from "@/components/guest/WinnerScreen";
+import type { SyncStatus } from "@/hooks/useGameSync";
 
-async function getSkeletonData() {
-  // Anon key only — service_role key must never be used in a Server Component
-  // that renders in the client bundle surface area (D-13).
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-  // Guard: degrade gracefully instead of throwing if env is misconfigured on
-  // the host. Surfaces a friendly card rather than a 500/build crash.
-  if (!url || !anonKey) {
-    return {
-      phase: "unknown",
-      questionCount: 0,
-      error:
-        "Lipsesc variabilele Supabase (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY) în mediul de deploy.",
-    };
-  }
+type Identity = { deviceToken: string; playerId: string };
 
-  const supabase = createClient<Database>(url, anonKey);
+// ── Loading screen ─────────────────────────────────────────────────────────────
 
-  // Parallelize independent fetches (vercel: async-parallel)
-  const [gameResult, countResult] = await Promise.all([
-    supabase
-      .from("games")
-      .select("phase")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .single(),
-    supabase
-      .from("questions_public")
-      .select("*", { count: "exact", head: true }),
-  ]);
-
-  return {
-    phase: gameResult.error ? "unknown" : (gameResult.data?.phase ?? "unknown"),
-    questionCount: countResult.error ? 0 : (countResult.count ?? 0),
-    error:
-      gameResult.error?.message ?? countResult.error?.message ?? null,
-  };
-}
-
-export default async function HomePage() {
-  const { phase, questionCount, error } = await getSkeletonData();
-
+/**
+ * LoadingScreen — shown when state is null (initial fetch in-flight) or
+ * when the phase falls through the switch (unknown/unexpected phase).
+ * Pitfall 2: state === null must be handled — phase switch has no null case.
+ */
+function LoadingScreen({ status }: { status: SyncStatus }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-ink p-4">
-      {/*
-       * Soft-luxury glassmorphism card (D-16 theme tokens + .glass utility).
-       * min-h-dvh instead of min-h-screen for correct mobile viewport height.
-       */}
-      <div className="glass w-full max-w-sm rounded-2xl px-8 py-10 text-center shadow-2xl">
-        {/* Heading — Playfair Display via --font-heading */}
-        <h1 className="font-heading text-4xl font-bold tracking-tight text-champagne">
-          Joc
-        </h1>
-        <div className="thin-divider" aria-hidden="true" />
-        <p className="text-sm font-medium uppercase tracking-widest text-champagne-dim">
-          Live Wedding Game Show
-        </p>
-
-        {/* Live data row */}
-        <div className="glass-gold mt-8 rounded-xl px-6 py-5" role="status" aria-label="Starea jocului">
-          {error ? (
-            <p className="text-sm text-blush" role="alert">
-              Eroare DB: {error}
-            </p>
-          ) : (
-            <>
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-xs uppercase tracking-widest text-champagne-dim">
-                  Faza
-                </span>
-                <span className="rounded-full bg-sage/20 px-3 py-1 text-sm font-semibold capitalize text-sage-light">
-                  {phase}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pt-3">
-                <span className="text-xs uppercase tracking-widest text-champagne-dim">
-                  Întrebări
-                </span>
-                <span className="tabular-nums text-sm font-semibold text-gold-bright">
-                  {questionCount} încărcate
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Walking skeleton notice — dev-only context */}
-        <p className="mt-8 text-xs text-champagne-dim/50">
-          Walking Skeleton — date live din Supabase
-        </p>
-      </div>
+    <main
+      className="relative min-h-dvh bg-ink flex items-center justify-center"
+      aria-label="Se încarcă jocul"
+    >
+      <SyncStatusBadge status={status} />
+      <span className="sr-only">Se încarcă...</span>
     </main>
   );
+}
+
+// ── Game view ──────────────────────────────────────────────────────────────────
+
+/**
+ * GameView — mounts useGameSync once and routes to phase screens.
+ *
+ * Single hook call (D-07, Pitfall 3). All screens are passed state + status
+ * as props — they are pure presentational components with no direct Supabase
+ * subscriptions.
+ */
+function GameView({ identity }: { identity: Identity }) {
+  const { state, status, participantCount } = useGameSync(
+    GAME_ID,
+    identity.playerId
+  );
+
+  // Pitfall 2: handle null state before switch (initial load, no fetch yet resolved)
+  if (state === null) {
+    return <LoadingScreen status={status} />;
+  }
+
+  switch (state.phase) {
+    case "lobby":
+      return (
+        <LobbyScreen participantCount={participantCount} status={status} />
+      );
+
+    case "question":
+    case "locked":
+      return (
+        <QuestionScreen
+          state={state}
+          identity={identity}
+          status={status}
+        />
+      );
+
+    case "revealed":
+      return <RevealScreen state={state} status={status} />;
+
+    case "ended":
+      return <WinnerScreen state={state} status={status} />;
+
+    default: {
+      // TypeScript exhaustiveness: state.phase is a known union; this branch
+      // fires only if the server sends an unexpected phase value.
+      const _exhaustive: never = state.phase;
+      void _exhaustive;
+      return <LoadingScreen status={status} />;
+    }
+  }
+}
+
+// ── Guest shell ────────────────────────────────────────────────────────────────
+
+/**
+ * GuestShell — root export for `/`.
+ *
+ * Hydration pattern mirrors src/app/host/page.tsx (HostPage):
+ *   - `hydrated` starts false; useEffect sets it true after localStorage read
+ *   - Pre-hydration: render neutral bg-ink element (avoids flashing gate, Pitfall 4)
+ *   - Post-hydration: show gate (identity null) or game view (identity present)
+ */
+export default function GuestShell() {
+  const [hydrated, setHydrated] = useState(false);
+  const [identity, setIdentity] = useState<Identity | null>(null);
+
+  useEffect(() => {
+    // Read localStorage once on mount. getIdentity() is SSR-safe.
+    setIdentity(getIdentity());
+    setHydrated(true);
+  }, []);
+
+  // Pre-hydration: blank ink screen — no gate, no game (Pitfall 4, D-03)
+  if (!hydrated) {
+    return <main className="min-h-dvh bg-ink" aria-hidden="true" />;
+  }
+
+  // First-time guest: show full-screen name gate (D-03, D-10)
+  if (identity === null) {
+    return <NameGate onJoined={setIdentity} />;
+  }
+
+  // Returning guest: skip gate, go straight to live game view (D-03)
+  return <GameView identity={identity} />;
 }
