@@ -45,8 +45,12 @@ function isValidUuid(value: unknown): value is string {
 // StandardAction routes through the single-expectedFrom TRANSITIONS map.
 // `force_end` (HOST-11, decision #4) is valid from ANY non-ended phase, so it is
 // NOT in TRANSITIONS — it is branched specially before the map lookup below.
+// `reset_game` (GAP-04-01, HOST-11) is valid from ANY phase (including ended) —
+// it returns the whole game to a fresh lobby. It is also NOT in TRANSITIONS and
+// is branched before the map lookup. DISTINCT from `/api/host/reset` which is a
+// surgical current-round-only reset (returns to `question`).
 type StandardAction = "start" | "lock" | "next" | "end";
-type Action = StandardAction | "force_end";
+type Action = StandardAction | "force_end" | "reset_game";
 
 const TRANSITIONS: Record<StandardAction, { expectedFrom: string; target: string }> = {
   start: { expectedFrom: "lobby",    target: "question" },
@@ -55,7 +59,7 @@ const TRANSITIONS: Record<StandardAction, { expectedFrom: string; target: string
   end:   { expectedFrom: "revealed", target: "ended"    },
 };
 
-const VALID_ACTIONS = new Set<Action>(["start", "lock", "next", "end", "force_end"]);
+const VALID_ACTIONS = new Set<Action>(["start", "lock", "next", "end", "force_end", "reset_game"]);
 
 function isValidAction(v: unknown): v is Action {
   return typeof v === "string" && VALID_ACTIONS.has(v as Action);
@@ -146,6 +150,57 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     return NextResponse.json({ ok: true, phase: "ended" }, { status: 200 });
+  }
+
+  // ── reset_game: return the whole game to a fresh lobby from ANY phase ────────
+  // Not routed through TRANSITIONS — valid from any phase (including ended).
+  // Calls the existing SECURITY DEFINER reset_game(p_game_id) RPC (migration 0003)
+  // which atomically: deletes ALL answers, zeroes ALL scores, sets phase='lobby',
+  // current_question_id=NULL, started_at=NULL, ended_at=NULL.
+  // Idempotent: short-circuits with noop when already in lobby.
+  // Reuses the existing GAME_ENDED event for resync (no new GameEvent member).
+  // DISTINCT from /api/host/reset (surgical current-round-only reset → question).
+  // Host-auth gated: validateHostAuth(req) is the FIRST statement of this handler.
+  // Security: T-04-18 (Spoofing), T-04-19 (concurrent idempotency), T-04-20 (confirm gate UI).
+  if (action === "reset_game") {
+    const { data: rgame, error: rgameError } = await adminClient
+      .from("games")
+      .select("phase")
+      .eq("id", gameId)
+      .single();
+
+    if (rgameError || !rgame) {
+      return NextResponse.json({ error: "game_not_found" }, { status: 404 });
+    }
+
+    // Already in lobby — idempotent no-op (avoids a needless full wipe + re-broadcast)
+    if (rgame.phase === "lobby") {
+      return NextResponse.json({ noop: true, phase: "lobby" }, { status: 200 });
+    }
+
+    // Call the existing reset_game RPC — full wipe: answers + scores + lobby reset
+    const { error: resetError } = await adminClient.rpc("reset_game", {
+      p_game_id: gameId,
+    });
+
+    if (resetError) {
+      console.error("[transition:reset_game] rpc failed:", resetError.message);
+      return NextResponse.json({ error: "reset_failed" }, { status: 500 });
+    }
+
+    // Best-effort broadcast — reuse GAME_ENDED so guests/TV re-fetch GET /api/game/state
+    // and converge to phase='lobby'. No new GameEvent union member (T-04-21).
+    try {
+      await broadcast(`game:${gameId}`, "GAME_EVENT", {
+        type: "GAME_ENDED",
+        gameId,
+      } satisfies GameEvent as Record<string, unknown>);
+    } catch (err) {
+      console.error("[broadcast] reset_game broadcast failed:", err);
+      // Best-effort — DB is source of truth; clients will re-fetch on reconnect
+    }
+
+    return NextResponse.json({ ok: true, phase: "lobby" }, { status: 200 });
   }
 
   const { expectedFrom, target } = TRANSITIONS[action];
