@@ -83,6 +83,9 @@ export function LockedDisplay({ state }: { state: GameStateSnapshot }) {
 
   // Guard distribution against null (correction #4)
   const dist = state.distribution ?? { A: 0, B: 0 };
+  const total = dist.A + dist.B;
+  const pctA = total > 0 ? Math.round((dist.A / total) * 100) : 0;
+  const pctB = total > 0 ? Math.round((dist.B / total) * 100) : 0;
 
   return (
     <div
@@ -126,12 +129,12 @@ export function LockedDisplay({ state }: { state: GameStateSnapshot }) {
         <OptionWithBar
           option="A"
           text={q?.optionA ?? "A"}
-          pct={dist.A}
+          pct={pctA}
         />
         <OptionWithBar
           option="B"
           text={q?.optionB ?? "B"}
-          pct={dist.B}
+          pct={pctB}
         />
       </div>
     </div>
