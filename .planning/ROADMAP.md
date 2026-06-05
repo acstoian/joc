@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Server Write Path & State Machine** - All API routes (join, answer, host transitions, reveal + scoring), anti-cheat, compare-and-swap (completed 2026-06-03)
 - [x] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery (completed 2026-06-03)
 - [x] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views (completed 2026-06-04)
-- [ ] **Phase 6: TV Display Mode** - /display cinematic landscape route with all screens and host-initiated countdown
+- [x] **Phase 6: TV Display Mode** - /display cinematic landscape route with all screens and host-initiated countdown (completed 2026-06-05)
 - [ ] **Phase 7: Polish & Pre-Event Hardening** - Wedding aesthetic, animation audit, performance validation, mandatory dry run
 
 ## Phase Details
@@ -198,8 +198,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on 06-01)*
 
-  - [ ] 06-02-PLAN.md — Gameplay slice: QuestionDisplay (slide-up) + LockedDisplay (live A/B bars) + RevealDisplay (gold-glow correct + top-5 leaderboard) (DISP-03, DISP-04, DISP-05, DISP-06)
-  - [ ] 06-03-PLAN.md — Winner + Countdown slice: WinnerDisplay (#1 hero + full leaderboard) + CountdownOverlay (3→2→1) + ControlTab "Numărătoare inversă" button (DISP-07, DISP-08)
+  - [x] 06-02-PLAN.md — Gameplay slice: QuestionDisplay (slide-up) + LockedDisplay (live A/B bars) + RevealDisplay (gold-glow correct + top-5 leaderboard) (DISP-03, DISP-04, DISP-05, DISP-06)
+  - [x] 06-03-PLAN.md — Winner + Countdown slice: WinnerDisplay (#1 hero + full leaderboard) + CountdownOverlay (3→2→1) + ControlTab "Numărătoare inversă" button (DISP-07, DISP-08)
 
 **UI hint**: yes
 
@@ -230,5 +230,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Server Write Path & State Machine | 5/5 | Complete    | 2026-06-03 |
 | 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
 | 5. Guest App | 3/3 | Complete   | 2026-06-04 |
-| 6. TV Display Mode | 1/3 | In Progress|  |
+| 6. TV Display Mode | 3/3 | Complete    | 2026-06-05 |
 | 7. Polish & Pre-Event Hardening | 0/TBD | Not started | - |

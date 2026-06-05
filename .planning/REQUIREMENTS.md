@@ -49,14 +49,14 @@ Requirements for the live-event release. Each maps to a roadmap phase.
 
 ### TV / Display Mode
 
-- [ ] **DISP-01**: Dedicated Display Mode route optimized for TV/projector (landscape, large typography, readable from afar)
-- [ ] **DISP-02**: Display auto-syncs in real time with host actions, independent of the host dashboard being open
-- [ ] **DISP-03**: Display shows the current question with animated transitions
-- [ ] **DISP-04**: Display shows live A/B answer percentages
-- [ ] **DISP-05**: Display shows the correct-answer reveal with reveal effects
-- [ ] **DISP-06**: Display shows the leaderboard
-- [ ] **DISP-07**: Display shows the winner screen at game end
-- [ ] **DISP-08**: Display supports a host-initiated cosmetic countdown for tension
+- [x] **DISP-01**: Dedicated Display Mode route optimized for TV/projector (landscape, large typography, readable from afar)
+- [x] **DISP-02**: Display auto-syncs in real time with host actions, independent of the host dashboard being open
+- [x] **DISP-03**: Display shows the current question with animated transitions
+- [x] **DISP-04**: Display shows live A/B answer percentages
+- [x] **DISP-05**: Display shows the correct-answer reveal with reveal effects
+- [x] **DISP-06**: Display shows the leaderboard
+- [x] **DISP-07**: Display shows the winner screen at game end
+- [x] **DISP-08**: ~~Display supports a host-initiated cosmetic countdown for tension~~ — descoped (manually triggered countdown had no purpose at a live wedding)
 
 ### Scoring & Fairness
 
@@ -145,14 +145,14 @@ Explicitly excluded. Documented to prevent scope creep.
 | PLAY-05 | Phase 5 — Guest App | Pending |
 | PLAY-06 | Phase 5 — Guest App | Pending |
 | PLAY-07 | Phase 5 — Guest App | Pending |
-| DISP-01 | Phase 6 — TV Display Mode | Pending |
-| DISP-02 | Phase 6 — TV Display Mode | Pending |
-| DISP-03 | Phase 6 — TV Display Mode | Pending |
-| DISP-04 | Phase 6 — TV Display Mode | Pending |
-| DISP-05 | Phase 6 — TV Display Mode | Pending |
-| DISP-06 | Phase 6 — TV Display Mode | Pending |
-| DISP-07 | Phase 6 — TV Display Mode | Pending |
-| DISP-08 | Phase 6 — TV Display Mode | Pending |
+| DISP-01 | Phase 6 — TV Display Mode | Complete |
+| DISP-02 | Phase 6 — TV Display Mode | Complete |
+| DISP-03 | Phase 6 — TV Display Mode | Complete |
+| DISP-04 | Phase 6 — TV Display Mode | Complete |
+| DISP-05 | Phase 6 — TV Display Mode | Complete |
+| DISP-06 | Phase 6 — TV Display Mode | Complete |
+| DISP-07 | Phase 6 — TV Display Mode | Complete |
+| DISP-08 | Phase 6 — TV Display Mode | Descoped |
 | RT-07 | Phase 7 — Polish & Pre-Event Hardening | Pending |
 | RT-08 | Phase 7 — Polish & Pre-Event Hardening | Pending |
 
