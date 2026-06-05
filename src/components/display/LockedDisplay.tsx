@@ -85,7 +85,7 @@ export function LockedDisplay({ state }: { state: GameStateSnapshot }) {
   const dist = state.distribution ?? { A: 0, B: 0 };
   const total = dist.A + dist.B;
   const pctA = total > 0 ? Math.round((dist.A / total) * 100) : 0;
-  const pctB = total > 0 ? Math.round((dist.B / total) * 100) : 0;
+  const pctB = total > 0 ? 100 - pctA : 0;
 
   return (
     <div

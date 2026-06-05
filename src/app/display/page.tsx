@@ -11,11 +11,6 @@
  *   - Fullscreen button (D-10): calls containerRef.current.requestFullscreen()
  *     on user click (must be inside click handler, not useEffect — Pitfall 4).
  *     Disappears after entering fullscreen via fullscreenchange listener.
- *   - Countdown state (D-09): intercepted from useGameSync onEvent callback
- *     before fetchState() re-run. setInterval drives the 3→2→1 decrement using
- *     a functional updater to avoid stale closure (Pitfall 3).
- *   - CountdownOverlay renders ALONGSIDE the phase screen (z-layered), never as
- *     an early return so useGameSync updates flow through (Pitfall 7).
  *   - DisplayStatusDot is always visible (D-11, DISP-02).
  *
  * No layout.tsx needed — root layout already provides <html lang="ro"> and fonts.
@@ -103,7 +98,7 @@ export default function DisplayPage() {
       {!isFullscreen && (
         <button
           type="button"
-          onClick={() => containerRef.current?.requestFullscreen()}
+          onClick={() => containerRef.current?.requestFullscreen().catch(() => {})}
           className="fixed top-4 right-4 z-50 glass rounded-lg px-4 py-2 text-[1.5vw] font-body text-champagne-dim hover:text-champagne transition-opacity duration-300"
           aria-label="Activează ecran complet"
         >

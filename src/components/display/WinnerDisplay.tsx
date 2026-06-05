@@ -53,7 +53,7 @@ export function WinnerDisplay({ state }: { state: GameStateSnapshot }) {
       </h2>
 
       {/* Full leaderboard with Finding 5 scale wrapper */}
-      <div className="w-full max-w-[80vw] mx-auto transform scale-150 origin-top">
+      <div className="w-full max-w-[55vw] mx-auto transform scale-150 origin-top">
         <LeaderboardPanel leaderboard={state.leaderboard} />
       </div>
 

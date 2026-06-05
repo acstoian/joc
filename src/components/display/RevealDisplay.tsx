@@ -36,14 +36,14 @@ interface OptionWithBarProps {
 function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps) {
   // Reveal state: correct = gold glow + scale; incorrect = dimmed
   // Applied via JSX conditionals at render time — no useEffect needed (Pitfall 5)
-  const isCorrect = correctOption !== null && option === correctOption;
+  const isCorrect = option === correctOption;
+  const isDimmed = correctOption !== null && !isCorrect;
 
   return (
     <div
       className={cn(
         "flex flex-col gap-[1.5vh]",
-        // Incorrect option wrapper dims to 40% opacity (D-04)
-        !isCorrect && "opacity-40 transition-opacity duration-300"
+        isDimmed && "opacity-40 transition-opacity duration-300"
       )}
     >
       {/* Option card — gold treatment on correct, plain glass on incorrect */}
@@ -117,7 +117,7 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
   const dist = state.distribution ?? { A: 0, B: 0 };
   const total = dist.A + dist.B;
   const pctA = total > 0 ? Math.round((dist.A / total) * 100) : 0;
-  const pctB = total > 0 ? Math.round((dist.B / total) * 100) : 0;
+  const pctB = total > 0 ? 100 - pctA : 0;
 
   return (
     <div
@@ -163,10 +163,10 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
       </div>
 
       {/* After-reveal top-5 leaderboard (DISP-06, D-05) */}
-      <div className="w-full max-w-[80vw] mx-auto">
+      <div className="w-full max-w-[55vw] mx-auto">
         <div className="thin-divider" />
-        {/* Scale wrapper: LeaderboardPanel uses mobile px/rem sizes; scale for TV readability
-            (Finding 5 from 06-RESEARCH.md). Component is imported unmodified. */}
+        {/* Scale wrapper: LeaderboardPanel uses mobile sizes; scale up for TV readability.
+            Container capped at 55vw so 1.5× output stays within ~83vw (overflow-hidden safe). */}
         <div className="transform scale-150 origin-top">
           <LeaderboardPanel leaderboard={state.leaderboard.slice(0, 5)} />
         </div>
