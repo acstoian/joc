@@ -75,3 +75,20 @@ h1, h2, h3, h4, h5, h6 {
   margin: 1.5rem auto;
   opacity: 0.5;
 }
+
+/* ── TV Display Mode animations ── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(2vh); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-scale {
+  from { opacity: 0.4; transform: scale(0.8); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes slide-up  { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
+  @keyframes fade-scale { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
+  .animate-pulse { animation: none; }
+}

@@ -32,6 +32,15 @@ import type { GameEvent } from "@/lib/realtime/events";
 // Values map 1-to-1 with REALTIME_SUBSCRIBE_STATES from @supabase/realtime-js.
 export type SyncStatus = "connecting" | "connected" | "reconnecting" | "error";
 
+// Options bag for useGameSync — all fields optional so existing callers
+// (host, guest) that pass no third argument are completely unaffected.
+// Phase 6 (Display Mode) uses onEvent to intercept COUNTDOWN_STARTED before
+// the state re-fetch (which does not surface this transient event).
+export type UseGameSyncOptions = {
+  /** Callback fired on every GAME_EVENT broadcast, BEFORE the state re-fetch. */
+  onEvent?: (event: GameEvent) => void;
+};
+
 // Authoritative resync shape returned by GET /api/game/state.
 // Also imported (type-only) by src/app/api/game/state/route.ts — do not rename
 // fields or remove exports without updating that route.
@@ -57,23 +66,39 @@ export type GameStateSnapshot = {
 };
 
 /**
- * useGameSync(gameId, playerId)
+ * useGameSync(gameId, playerId, options?)
  *
  * Returns { state, status, participantCount }.
  * Headless — no JSX, no UI elements (D-01, RT-06).
  *
  * @param gameId   UUID of the game session (matches `games.id` in DB)
  * @param playerId UUID of the current player (used for per-player answer in state fetch)
+ * @param options  Optional — { onEvent? } callback fired on every broadcast before re-fetch.
+ *                 All existing callers that omit this argument are unaffected.
  */
 export function useGameSync(
   gameId: string,
-  playerId: string
+  playerId: string,
+  options?: UseGameSyncOptions
 ): { state: GameStateSnapshot | null; status: SyncStatus; participantCount: number } {
   // createClient() returns a module-level singleton (createBrowserClient singleton
   // behavior — Pitfall 6). Holding it in a ref keeps the reference stable across
   // renders and lets the effect read supabaseRef.current directly, satisfying
   // react-hooks/exhaustive-deps (the ref object itself is stable).
   const supabaseRef = useRef(createClient());
+
+  // Capture onEvent in a ref so we can call the latest version from the broadcast
+  // handler without adding it to the [gameId, playerId] dependency array (which
+  // would recreate the channel subscription on every render that passes a new
+  // callback object — an anti-pattern on hooks that manage WebSocket subscriptions).
+  // The ref is updated on every render via a separate useEffect, which runs before
+  // the next paint but does not trigger a re-render of the hook itself.
+  const onEventRef = useRef(options?.onEvent);
+  // Update the ref on every render so callers always see the latest callback.
+  // No dependency array — runs every render (fine: it is a ref write, not setState).
+  useEffect(() => {
+    onEventRef.current = options?.onEvent;
+  });
 
   // Hold the channel across renders without triggering re-renders on assignment.
   // Type is inferred from the client instance held in supabaseRef.
@@ -177,11 +202,17 @@ export function useGameSync(
         // Re-fetch from the DB for authoritative state — NEVER read game data
         // off the event payload (D-06, T-02-05 — forged/replayed broadcasts
         // cannot corrupt displayed state when the DB is always the source).
+        //
+        // onEventRef.current fires BEFORE fetchState() so transient events like
+        // COUNTDOWN_STARTED (which have no DB representation) can be captured
+        // by the Display Mode shell before the re-fetch overwrites hook state.
+        // onEventRef is updated on every render (see useEffect above the main
+        // effect) so the closure always calls the latest callback. The ref
+        // pattern avoids adding onEvent to the [gameId, playerId] dep array,
+        // which would recreate the channel subscription on every render.
         .on("broadcast", { event: "GAME_EVENT" }, async ({ payload }) => {
-          // Type assertion gives exhaustiveness checking in Phase 3+ when the
-          // union is extended; the payload itself is ignored for data purposes.
-          const _event = payload as GameEvent;
-          void _event; // signal "intentionally unused" — event type drives future animation
+          const event = payload as GameEvent;
+          onEventRef.current?.(event);
           await fetchState();
         });
 
