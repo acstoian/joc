@@ -34,18 +34,18 @@ Requirements for the live-event release. Each maps to a roadmap phase.
 - [x] **HOST-05**: Host can advance to the next question
 - [x] **HOST-06**: Host can reset answers for the current round
 - [x] **HOST-07**: Host can end the game
-- [ ] **HOST-08**: Host sees the live participant count
-- [ ] **HOST-09**: Host sees the live A/B answer distribution as answers arrive
-- [ ] **HOST-10**: Host can see who answered what for the current question
-- [ ] **HOST-11**: Host has emergency recovery controls (reset round / jump to question / force-end) to recover a stuck game live
+- [x] **HOST-08**: Host sees the live participant count
+- [x] **HOST-09**: Host sees the live A/B answer distribution as answers arrive
+- [x] **HOST-10**: Host can see who answered what for the current question
+- [x] **HOST-11**: Host has emergency recovery controls (reset round / jump to question / force-end) to recover a stuck game live
 
 ### Question Management
 
-- [ ] **QSTN-01**: Host can create a question with text, answer A, and answer B
-- [ ] **QSTN-02**: Host can edit a question
-- [ ] **QSTN-03**: Host can delete a question
-- [ ] **QSTN-04**: Host can mark which option (A or B) is correct
-- [ ] **QSTN-05**: Host can reorder questions
+- [x] **QSTN-01**: Host can create a question with text, answer A, and answer B
+- [x] **QSTN-02**: Host can edit a question
+- [x] **QSTN-03**: Host can delete a question
+- [x] **QSTN-04**: Host can mark which option (A or B) is correct
+- [x] **QSTN-05**: Host can reorder questions
 
 ### TV / Display Mode
 
@@ -127,15 +127,15 @@ Explicitly excluded. Documented to prevent scope creep.
 | HOST-07 | Phase 3 — Server Write Path & State Machine | Complete |
 | SCOR-01 | Phase 3 — Server Write Path & State Machine | Complete |
 | SCOR-02 | Phase 3 — Server Write Path & State Machine | Complete |
-| HOST-08 | Phase 4 — Host Dashboard | Pending |
-| HOST-09 | Phase 4 — Host Dashboard | Pending |
-| HOST-10 | Phase 4 — Host Dashboard | Pending |
-| HOST-11 | Phase 4 — Host Dashboard | Pending |
-| QSTN-01 | Phase 4 — Host Dashboard | Pending |
-| QSTN-02 | Phase 4 — Host Dashboard | Pending |
-| QSTN-03 | Phase 4 — Host Dashboard | Pending |
-| QSTN-04 | Phase 4 — Host Dashboard | Pending |
-| QSTN-05 | Phase 4 — Host Dashboard | Pending |
+| HOST-08 | Phase 4 — Host Dashboard | Complete |
+| HOST-09 | Phase 4 — Host Dashboard | Complete |
+| HOST-10 | Phase 4 — Host Dashboard | Complete |
+| HOST-11 | Phase 4 — Host Dashboard | Complete |
+| QSTN-01 | Phase 4 — Host Dashboard | Complete |
+| QSTN-02 | Phase 4 — Host Dashboard | Complete |
+| QSTN-03 | Phase 4 — Host Dashboard | Complete |
+| QSTN-04 | Phase 4 — Host Dashboard | Complete |
+| QSTN-05 | Phase 4 — Host Dashboard | Complete |
 | JOIN-04 | Phase 5 — Guest App | Pending |
 | JOIN-05 | Phase 5 — Guest App | Pending |
 | PLAY-01 | Phase 5 — Guest App | Pending |

@@ -31,7 +31,6 @@ import { LockedDisplay } from "@/components/display/LockedDisplay";
 import { RevealDisplay } from "@/components/display/RevealDisplay";
 import { WinnerDisplay } from "@/components/display/WinnerDisplay";
 import { DisplayStatusDot } from "@/components/display/DisplayStatusDot";
-import { CountdownOverlay } from "@/components/display/CountdownOverlay";
 
 export default function DisplayPage() {
   // Root container ref — used for requestFullscreen (D-10, Pitfall 4).
@@ -40,24 +39,11 @@ export default function DisplayPage() {
   // Fullscreen state — hides the "Ecran complet" button after entering fullscreen.
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Countdown state — null means no overlay; a positive integer drives the overlay.
-  // Populated from the COUNTDOWN_STARTED event via onEvent (D-09, Finding 2).
-  const [countdown, setCountdown] = useState<number | null>(null);
-
   // Single useGameSync call — anonymous observer using HOST_SENTINEL_PLAYER_ID.
   // NEVER pass null as playerId (TS2345 strict mode error — Finding 1).
-  // onEvent fires BEFORE fetchState() so COUNTDOWN_STARTED is captured before
-  // the re-fetch (which has no DB representation of this transient event).
   const { state, status, participantCount } = useGameSync(
     GAME_ID,
-    HOST_SENTINEL_PLAYER_ID,
-    {
-      onEvent: (event) => {
-        if (event.type === "COUNTDOWN_STARTED") {
-          setCountdown(event.seconds);
-        }
-      },
-    }
+    HOST_SENTINEL_PLAYER_ID
   );
 
   // Fullscreen change listener — syncs isFullscreen with the browser state.
@@ -69,17 +55,6 @@ export default function DisplayPage() {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
-
-  // Countdown interval — decrements every 1s; clears when countdown reaches null.
-  // Functional updater avoids stale closure capture (Pitfall 3).
-  // Re-runs when countdown changes (3→2→1) so each tick spawns a fresh interval.
-  useEffect(() => {
-    if (countdown === null || countdown <= 0) return;
-    const t = setInterval(() => {
-      setCountdown((c) => (c !== null && c > 1 ? c - 1 : null));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [countdown]);
 
   // Phase screen — derived from state.phase.
   // If state is null (initial fetch in-flight), show LoadingDisplay.
@@ -136,12 +111,7 @@ export default function DisplayPage() {
         </button>
       )}
 
-      {/* Countdown overlay — renders ABOVE the phase screen (z-40) but never
-          INSTEAD OF it (Pitfall 7). useGameSync updates flow through while the
-          overlay is visible. Unmounts automatically when countdown reaches null. */}
-      {countdown !== null && <CountdownOverlay countdown={countdown} />}
-
-      {/* Phase screen — always rendered; overlay sits on top via z-index */}
+      {/* Phase screen */}
       {screen}
     </div>
   );

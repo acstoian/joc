@@ -116,11 +116,6 @@ export function ControlTab({
   // Single in-flight action guard (SC4 — blocks double-tap)
   const [inFlight, setInFlight] = useState<string | null>(null);
 
-  // Separate countdown in-flight boolean (Finding 3, Correction 3):
-  // COUNTDOWN_STARTED does NOT change state.phase, so the inFlight useEffect
-  // would never clear it. Self-clears after 2s via setTimeout.
-  const [countdownInFlight, setCountdownInFlight] = useState(false);
-
   // Correct-option pick for the reveal action (the host picks A or B live)
   const [revealChoice, setRevealChoice] = useState<"A" | "B">("A");
 
@@ -246,29 +241,6 @@ export function ControlTab({
   const anyInFlight = inFlight !== null;
   const phase = state?.phase ?? null;
 
-  // ── Countdown handler (D-08, DISP-08) ───────────────────────────────────
-  // Cosmetic broadcast — does NOT mutate game state or phase.
-  // Uses its own inFlight boolean (Correction 3, Finding 3) because
-  // COUNTDOWN_STARTED never changes state.phase so the phase-watch useEffect
-  // would never re-enable the button.
-  // Also blocked during any game-state action (Correction 4) to prevent
-  // firing a cosmetic broadcast during a real transition.
-  async function handleCountdown() {
-    if (countdownInFlight || anyInFlight) return;
-    setCountdownInFlight(true);
-    try {
-      await hostFetch("/api/host/countdown", password, {
-        method: "POST",
-        body: JSON.stringify({ gameId, seconds: 3 }),
-      });
-      // Success — self-clear after 2s regardless (see finally)
-    } catch {
-      // Cosmetic broadcast — silent on failure
-    } finally {
-      setTimeout(() => setCountdownInFlight(false), 2000);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4">
 
@@ -381,33 +353,6 @@ export function ControlTab({
             onClick={() => handleAction("end")}
           />
         </div>
-      </div>
-
-      {/* ── Section D: Display controls (cosmetic) ──────────────────────────── */}
-      <div className="glass rounded-2xl px-5 py-4 shadow-xl">
-        <p className="mb-3 text-xs font-semibold text-champagne-dim/60">
-          Ecran TV
-        </p>
-        <button
-          type="button"
-          onClick={handleCountdown}
-          disabled={countdownInFlight || anyInFlight}
-          className={[
-            "min-h-[44px] w-full rounded-lg px-4 py-2",
-            "text-sm font-semibold font-body",
-            "bg-ink-light border border-champagne/20 text-champagne-dim",
-            "hover:border-champagne/40 hover:text-champagne",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne/30",
-            "disabled:opacity-40 disabled:cursor-not-allowed",
-            "transition-colors duration-150",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          style={{ touchAction: "manipulation" }}
-          aria-label="Porneste numaratoarea inversa pe ecranul TV"
-        >
-          {countdownInFlight ? "Se porneste..." : "Numărătoare inversă"}
-        </button>
       </div>
 
       {/* ── Section C: Emergency controls (collapsible, Plan 05 HOST-11) ─────── */}

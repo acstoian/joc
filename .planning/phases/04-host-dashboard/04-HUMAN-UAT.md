@@ -1,9 +1,9 @@
 ---
-status: gaps_found
+status: resolved
 phase: 04-host-dashboard
 source: [04-VERIFICATION.md]
 started: 2026-06-03T16:20:00Z
-updated: 2026-06-03T17:30:00Z
+updated: 2026-06-04T04:20:00Z
 ---
 
 ## Current Test
@@ -92,7 +92,17 @@ notes: |
 ## Gaps
 
 ### GAP-04-01: No "New Game / Return to Lobby" recovery control (ended is terminal)
-status: failed
+status: resolved
+resolved_by: 04-06 (commits 0646b2f, 5496ec7)
+resolution: |
+  Closed by gap-closure plan 04-06. Added a host-auth-gated `reset_game` action to
+  POST /api/host/transition (calls the existing migration-0003 reset_game RPC: clears all
+  answers, zeroes scores, sets phase=lobby/current_question_id=null; idempotent no-op from
+  lobby; reuses the existing GAME_ENDED broadcast for resync — no new GameEvent member) and a
+  confirm-gated "Joc Nou / Reseteaza Jocul" control in EmergencyPanel, distinct from the
+  round-only "Reseteaza Runda". Code-verified 24/24 in 04-VERIFICATION.md. End-to-end runtime
+  re-test (return-to-lobby across tabs from ended, fresh game starts clean, idempotency,
+  round-reset distinctness) is tracked as the pending human-verify item #11 in 04-VERIFICATION.md.
 severity: medium
 requirement: HOST-11 (emergency recovery)
 found_in: Test 5 / Emergency panel (surfaced during Test 3)

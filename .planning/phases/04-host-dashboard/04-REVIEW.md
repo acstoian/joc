@@ -1,344 +1,168 @@
 ---
 phase: 04-host-dashboard
-reviewed: 2026-06-03T18:27:55Z
+reviewed: 2026-06-04T00:00:00Z
 depth: standard
-files_reviewed: 18
+files_reviewed: 2
 files_reviewed_list:
-  - src/app/api/host/answers/route.ts
-  - src/app/api/host/questions/route.ts
-  - src/app/api/host/questions/[id]/route.ts
-  - src/app/api/host/questions/reorder/route.ts
   - src/app/api/host/transition/route.ts
-  - src/app/host/page.tsx
-  - src/app/layout.tsx
-  - src/components/host/ControlTab.tsx
-  - src/components/host/DistributionBar.tsx
   - src/components/host/EmergencyPanel.tsx
-  - src/components/host/PhaseButton.tsx
-  - src/components/host/QuestionRow.tsx
-  - src/components/host/QuestionsTab.tsx
-  - src/components/host/StatsTab.tsx
-  - src/hooks/useHostAnswerNames.ts
-  - src/hooks/useHostAuth.ts
-  - src/hooks/useHostQuestions.ts
-  - src/lib/host/constants.ts
 findings:
-  critical: 4
-  warning: 5
+  critical: 0
+  warning: 3
   info: 3
-  total: 12
+  total: 6
 status: issues_found
 ---
 
-# Phase 4: Code Review Report
+# Phase 4: Code Review Report (gap-closure 04-06 / GAP-04-01 / HOST-11)
 
-**Reviewed:** 2026-06-03T18:27:55Z
+**Reviewed:** 2026-06-04T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 18
+**Files Reviewed:** 2
 **Status:** issues_found
+
+> Scope note: this REVIEW.md is the focused re-review of the 04-06 gap-closure changes
+> (the `reset_game` action on `POST /api/host/transition` and the "Joc Nou / Reseteaza
+> Jocul" control in `EmergencyPanel`). It supersedes the earlier full-phase REVIEW for
+> these two files.
 
 ## Summary
 
-Phase 4 delivers the host dashboard — password gate, phase control buttons, question CRUD, and live stats. The auth gating pattern and in-flight button discipline are correctly implemented. However, four critical defects were found: two data-integrity gaps in the API layer (cross-game PUT with no ownership check; answers endpoint leaks names across question boundaries within the same game), one security concern with the `error.message` detail leaking from admin DB client to clients, and one correctness bug in the in-flight re-enable logic that unconditionally fires on mount. Additionally, the reorder endpoint silently swallows DB errors, and the `EmergencyPanel` jump action has a server-side phase constraint that the UI does not communicate clearly.
+Reviewed the gap-closure 04-06 changes (GAP-04-01 / HOST-11): the new `reset_game`
+action on `POST /api/host/transition` and the confirm-gated "Joc Nou / Reseteaza Jocul"
+control in `EmergencyPanel`.
 
----
+**Security posture is sound.** Host-auth gating is correct: `validateHostAuth(req)` is
+the first executable statement of the handler (route.ts:73), so the destructive
+`reset_game` path is fully protected before any DB access. The action calls the existing
+`SECURITY DEFINER reset_game(p_game_id)` RPC (migration 0003), which is `REVOKE`d from
+`anon`/`PUBLIC` and only reachable via the service-role admin client. `gameId` is
+UUID-validated before use (route.ts:87-89) and the RPC call is parameterized
+(route.ts:182-184), so there is no injection surface. The UI gates the action behind an
+`AlertDialog` confirm (T-04-20), and `runAction` guards against double-submit via the
+`busy` lock (EmergencyPanel.tsx:76-77).
 
-## Critical Issues
-
-### CR-01: `PUT /api/host/questions/[id]` — No cross-game ownership check
-
-**File:** `src/app/api/host/questions/[id]/route.ts:99-116`
-
-**Issue:** The PUT handler validates the `id` UUID from the URL but performs the UPDATE filtering only on `.eq("id", id)`. There is no `.eq("game_id", ...)` clause. Any host who knows a UUID of a question from a different game can overwrite that question's body/options/correct_option. The DELETE handler at line 163 correctly applies `.eq("game_id", gameId)`, but PUT does not. The spec (RQ-2, "cross-game edit guard") explicitly required this check.
-
-**Fix:**
-```typescript
-// PUT handler — add game_id scope to the UPDATE
-// Require gameId in the request body (mirror DELETE's pattern for gameId)
-// Then apply both conditions:
-const { data: updated, error: updateError } = await adminClient
-  .from("questions")
-  .update(updatePayload)
-  .eq("id", id)
-  .eq("game_id", gameId)   // <-- add this
-  .select("id, body, option_a, option_b, correct_option, display_order, created_at");
-```
-The request body must also supply `gameId` (UUID-validated), or alternatively read it as a query param (consistent with DELETE). The 404 path still handles the case where the id simply does not exist for this game.
-
----
-
-### CR-02: `GET /api/host/answers` — No `gameId` filter on the DB query
-
-**File:** `src/app/api/host/answers/route.ts:56-59`
-
-**Issue:** The endpoint accepts both `gameId` and `questionId` as query params and UUID-validates both. However, the Supabase query filters **only** on `question_id`:
-```typescript
-.eq("question_id", questionId)
-```
-`gameId` is validated but never used in the query. A question UUID is globally unique (UUID v4), so for the single-game MVP this is not exploitable in practice. But the threat is real in principle: a host supplying a `questionId` that belongs to a different game's session will receive answer names for that question with no server-side rejection. The `gameId` parameter should be joined through to verify ownership.
-
-**Fix:**
-```typescript
-// Join through questions to verify the question belongs to this game:
-const { data, error } = await adminClient
-  .from("answers")
-  .select("choice, players!inner(display_name), questions!inner(game_id)")
-  .eq("question_id", questionId)
-  .eq("questions.game_id", gameId);   // cross-game guard
-```
-Alternatively, do a prior ownership check:
-```typescript
-const { data: q } = await adminClient
-  .from("questions")
-  .select("id")
-  .eq("id", questionId)
-  .eq("game_id", gameId)
-  .maybeSingle();
-if (!q) return NextResponse.json({ error: "question_not_found" }, { status: 404 });
-```
-
----
-
-### CR-03: Admin DB `error.message` leaked to client in multiple routes
-
-**File:** `src/app/api/host/questions/route.ts:45`, `src/app/api/host/questions/route.ts:123`, `src/app/api/host/questions/[id]/route.ts:107`, `src/app/api/host/answers/route.ts:63`
-
-**Issue:** Every error response in the new host question and answers routes includes `detail: error.message` (or `detail: insertError?.message`) from the Supabase admin client. These Postgres-level error messages can contain table names, column names, constraint names, and query fragments. While the endpoints are host-only, including raw DB internals in API responses is an information disclosure risk and a bad practice (ASVS V7.4).
-
-Example at `questions/route.ts:45`:
-```typescript
-return NextResponse.json({ error: error.message }, { status: 500 });
-```
-And at `answers/route.ts:63`:
-```typescript
-{ error: "answers_fetch_failed", detail: error.message },
-```
-
-**Fix:** Log the detail server-side; return only a stable opaque error code to the client:
-```typescript
-console.error("[host/questions GET]", error.message);
-return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
-```
-The `transition/route.ts` from Phase 3 follows the same leaky pattern — that is out of scope for this review but should be addressed consistently.
-
----
-
-### CR-04: `ControlTab` in-flight re-enable fires unconditionally on initial mount
-
-**File:** `src/components/host/ControlTab.tsx:205-210`
-
-**Issue:** The `useEffect` that clears `inFlight` on phase change runs on the initial render even when `inFlight === null`:
-```typescript
-useEffect(() => {
-  if (inFlight !== null) {
-    setInFlight(null);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [state?.phase]);
-```
-This is suppressed with an `eslint-disable` comment and has a shallow bug: because `inFlight` is not in the dependency array, a stale closure is captured. If `state?.phase` changes but `inFlight` has been cleared already by the error path (line 268 or 288), nothing bad happens. But if `state?.phase` changes **before** the API call returns (concurrent user on another device triggers a state change), the `inFlight` captured in the closure is the value at the time the `useEffect` was re-registered — which could be `null` (wrong) or the old action (correct). The real problem is that `inFlight` is stale in this closure.
-
-The canonical fix (from RQ-6 / RESEARCH.md) uses a functional update or a `useRef` for `inFlight`:
-```typescript
-const inFlightRef = useRef<string | null>(null);
-
-// Keep ref in sync:
-useEffect(() => { inFlightRef.current = inFlight; }, [inFlight]);
-
-// Re-enable on phase change:
-useEffect(() => {
-  if (inFlightRef.current !== null) {
-    setInFlight(null);
-  }
-}, [state?.phase]);  // no eslint-disable needed
-```
-This is a correctness issue: in a multi-device scenario (race at the wedding), this stale closure can leave buttons permanently locked until the 5-second fallback fires, degrading SC4.
-
----
+The concerns below are correctness/robustness around idempotency-under-concurrency and a
+mismatch between what the control promises ("Joc Nou" / new game) and what the RPC
+actually leaves behind. None are exploitable, hence no Critical findings — but the
+concurrency rewind (WR-01) is a real data-loss-shaped behavior worth fixing before ship.
 
 ## Warnings
 
-### WR-01: `reorder` PATCH — DB errors silently ignored
+### WR-01: `reset_game` has no phase guard — a concurrent forward transition is silently rewound and wiped
 
-**File:** `src/app/api/host/questions/reorder/route.ts:57-65`
+**File:** `src/app/api/host/transition/route.ts:165-204`
+**Issue:** The `reset_game` branch does a non-atomic read-then-RPC: it `SELECT`s `phase`,
+short-circuits if `lobby`, then calls `reset_game(p_game_id)`. Unlike the sibling
+`force_end` branch (which uses a CAS `.neq("phase","ended")` so concurrent writers
+converge — route.ts:125-140), the `reset_game` RPC's final `UPDATE games SET phase='lobby'`
+(migration 0003, lines 35-40) is **unconditional**. There is a TOCTOU window between the
+read (route.ts:166-170) and the RPC call (route.ts:182-184). If the host (or a duplicate
+request) issues `start` (lobby→question) at the same instant another `reset_game` fires,
+the reset can land *after* the start — deleting every answer just submitted and rewinding
+`phase` back to `lobby` with no error surfaced. The host sees a success toast for a
+destructive operation that clobbered an in-progress round.
 
-**Issue:** The `Promise.all` over individual UPDATE calls is not awaited for individual errors. The resolved value of each `adminClient.from("questions").update(...)` call is discarded — the `await Promise.all(...)` result is never checked:
-```typescript
-await Promise.all(
-  (order as string[]).map((questionId, index) =>
-    adminClient.from("questions").update(...)
-  )
-);
+Two concurrent `reset_game` calls are benign (both converge to lobby), but `reset_game`
+racing any forward transition is a silent data-loss path. The read at route.ts:166-170
+provides idempotency only for the already-lobby case, not serialization.
 
-return NextResponse.json({ ok: true });   // always 200, even if all UPDATEs fail
-```
-If Supabase returns an error for any update (e.g., connection issue, constraint violation), the endpoint returns `{ ok: true }` with HTTP 200. The client will then refetch and see the old order — a silent failure that will confuse the host.
+**Fix:** Keep the destructive write atomic by guarding it at the RPC level. Make the RPC's
+final `UPDATE` conditional and report whether it applied, so the route can detect a lost
+race instead of blindly reporting success:
 
-**Fix:**
-```typescript
-const results = await Promise.all(
-  (order as string[]).map((questionId, index) =>
-    adminClient
-      .from("questions")
-      .update({ display_order: index + 1 })
-      .eq("id", questionId)
-      .eq("game_id", gameId)
-  )
-);
-
-const failed = results.filter(r => r.error);
-if (failed.length > 0) {
-  console.error("[reorder] partial failure:", failed[0].error?.message);
-  return NextResponse.json({ error: "reorder_partial_failure" }, { status: 500 });
-}
-
-return NextResponse.json({ ok: true });
-```
-
----
-
-### WR-02: `EmergencyPanel` jump action — server-side phase constraint not communicated in UI
-
-**File:** `src/components/host/EmergencyPanel.tsx:109-126`
-
-**Issue:** The "Sari la Intrebarea #N" jump action calls `POST /api/host/transition` with `action: "next"`, which has `expectedFrom: "revealed"` in the TRANSITIONS map. If the host is not in the `revealed` phase, the server returns 409 and the UI shows the generic "Starea jocului s-a schimbat" toast. This is confusing because the host may not know they need to be in the `revealed` phase to use the jump feature.
-
-The `EmergencyPanel` component is labeled "Controale de urgenta" and should be usable from any state — but the underlying route does not support `next` from non-revealed phases.
-
-**Fix:** Either (a) disable the Jump button when `state.phase` is not `"revealed"` and show a tooltip ("Dezvaluie raspunsul inainte de a sari."), or (b) add a `force_next` action to the transition route (analogous to `force_end`) that accepts any phase. Option (a) is simpler and correct for the current phase. The `EmergencyPanel` should accept `currentPhase` as a prop:
-```typescript
-// EmergencyPanel
-const canJump = currentPhase === "revealed";
-<Button disabled={anyBusy || count === 0 || !canJump} ...>
-  Sari la Intrebare
-</Button>
-{!canJump && count > 0 && (
-  <p className="text-xs text-champagne-dim/50">
-    Dezvaluie raspunsul curent inainte de a sari.
-  </p>
-)}
+```sql
+CREATE OR REPLACE FUNCTION reset_game(p_game_id uuid) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE did_reset boolean;
+BEGIN
+  -- ... existing answer DELETE + score zeroing ...
+  UPDATE games
+     SET phase='lobby', current_question_id=NULL, started_at=NULL, ended_at=NULL
+   WHERE id = p_game_id;          -- (optionally AND phase <> 'lobby')
+  GET DIAGNOSTICS did_reset = ROW_COUNT;
+  RETURN did_reset > 0;
+END; $$;
 ```
 
----
+Alternatively, treat `reset_game` as an explicit "stop the world" admin action and
+disable the other host controls client-side while a reset is in flight (the `busy` lock
+already exists locally but does not coordinate across the host page's other panels).
 
-### WR-03: `useHostAnswerNames` — stale `cancelledRef` pattern can miss error state reset
+### WR-02: "Joc Nou" leaves all players in the DB — the control promises a fresh game it does not deliver
 
-**File:** `src/hooks/useHostAnswerNames.ts:37-68`
+**File:** `src/app/api/host/transition/route.ts:155-204`, `supabase/migrations/0003_reset_function.sql:19-41`
+**Issue:** The control copy and success toast claim a new game: button label
+"Joc Nou / Reseteaza Jocul" (EmergencyPanel.tsx:272) and toast
+"Jocul a fost resetat. Poti porni un joc nou." (EmergencyPanel.tsx:118). The route
+docstring says it returns to "a fresh lobby" (route.ts:155-159). But `reset_game` only
+(1) deletes answers, (2) zeroes `scores.correct_count`, and (3) resets the `games` row.
+It **does not delete the `players` table rows** (migration 0003 has no `DELETE FROM
+players`). After a "Joc Nou," every guest from the previous game remains a registered
+player with a zeroed score, so the new lobby is pre-populated with stale players and the
+leaderboard already lists everyone at 0. The behavior does not match the "Joc Nou" (new
+game) promise.
 
-**Issue:** The `cancelledRef` in `useHostAnswerNames` is set to `false` at the start of the `useEffect` cleanup setup (line 62), but `refetch` is called as a `useCallback` that captures `cancelledRef` by closure. If `refetch` is called manually (e.g., when the user opens the collapsible via `handleToggleNames` → `refetch()`), and the component unmounts between the `setLoading(true)` call and the `finally` block, `setLoading(false)` is correctly skipped. However, if the component remounts quickly (tab switching), a new `cancelledRef.current = false` at line 62 will race with the pending `finally`. In that scenario `setLoading(false)` IS called (because `cancelledRef.current` was reset to `false`) but `setNames` is correctly guarded (the check at line 51 was already passed). The result is `loading: false` but `names: null` (stale) — an inconsistency.
+**Fix:** Decide the intended semantic and align copy + behavior:
+- If "re-run with the same wedding guests" is intended (likely for a single event),
+  change the label/toast to "Reseteaza Jocul" only and drop the "Joc Nou" framing so the
+  host is not surprised by persisted players.
+- If a genuinely fresh game is intended, extend `reset_game` to also
+  `DELETE FROM players WHERE game_id = p_game_id` (cascading to scores) and document the
+  device-token implication for reconnecting guests.
 
-More practically: the `refetch` callback includes `cancelledRef` only indirectly (by reference); the ref object identity is stable. The real issue is that the cleanup `return () => { cancelledRef.current = true; }` in the `useEffect` at line 64 only fires when the effect re-runs (i.e., when `refetch` identity changes) — not when the user manually calls `refetch()` by opening the collapsible. This means a manual `refetch()` initiated while a previous one was still in-flight will not cancel the prior one.
+### WR-03: 404 from a misconfigured `gameId` surfaces as a misleading "check your connection" toast
 
-**Fix:** Use an AbortController per fetch call, or use a counter-based approach:
-```typescript
-const fetchCountRef = useRef(0);
+**File:** `src/app/api/host/transition/route.ts:166-174`, `src/components/host/EmergencyPanel.tsx:51-59`
+**Issue:** The `reset_game` pre-read uses `.single()`, which errors when the row does not
+exist, mapping to `404 game_not_found` (route.ts:172-174). The client's
+`errorToastForStatus` lumps all non-409 4xx into "Actiunea a esuat. Verifica conexiunea
+si incearca din nou." (EmergencyPanel.tsx:54-55) — a "check your connection" message for
+what is actually a configuration error (e.g. wrong `NEXT_PUBLIC_GAME_ID`). During a live
+event this gives the operator no actionable signal. (Note: the pre-read is also load-
+bearing — the RPC itself silently no-ops on a bad id since its `UPDATE … WHERE id =
+p_game_id` matches 0 rows without error — so the pre-read must stay.)
 
-const refetch = useCallback(async () => {
-  if (!questionId) { setNames(null); return; }
-  const token = ++fetchCountRef.current;
-  setLoading(true);
-  try {
-    const res = await hostFetch(...);
-    if (fetchCountRef.current !== token) return;  // superseded
-    if (res.ok) {
-      const data = await res.json() as AnswerNames;
-      if (fetchCountRef.current === token) setNames({ A: data.A ?? [], B: data.B ?? [] });
-    }
-  } catch { /* best-effort */ }
-  finally {
-    if (fetchCountRef.current === token) setLoading(false);
-  }
-}, [gameId, questionId, password]);
-```
-
----
-
-### WR-04: `ControlTab` — local `DistributionBar` component shadows the standalone `DistributionBar` from `src/components/host/DistributionBar.tsx`
-
-**File:** `src/components/host/ControlTab.tsx:103-151`
-
-**Issue:** `ControlTab.tsx` defines a private `DistributionBar` function (lines 103–151) that accepts `{ distribution: { A: number; B: number } | null }`. The standalone `src/components/host/DistributionBar.tsx` component accepts `{ a, b, height? }`. These are two different implementations of the same visual element. The `StatsTab` imports the correct standalone component; `ControlTab` uses its own private copy. This is code duplication and means styling/animation changes must be made in two places.
-
-**Fix:** Replace the private `DistributionBar` in `ControlTab.tsx` with the imported standalone component:
-```typescript
-import { DistributionBar } from "@/components/host/DistributionBar";
-
-// In the JSX — replace:
-<DistributionBar distribution={state?.distribution ?? null} />
-// With:
-{state?.distribution ? (
-  <DistributionBar a={state.distribution.A} b={state.distribution.B} />
-) : (
-  <p className="text-xs text-champagne-dim/60">Niciun raspuns inca.</p>
-)}
-```
-
----
-
-### WR-05: `useHostQuestions.update` — `gameId` not included in the `update` dependency array
-
-**File:** `src/hooks/useHostQuestions.ts:136-165`
-
-**Issue:** The `update` callback has `[password, refetch]` in its dependency array (line 164) but is missing `gameId`. In a single-game MVP this is inconsequential because `gameId` never changes after mount, but in strict TypeScript/ESLint-exhaustive-deps it would be flagged. More importantly, if `gameId` changed (e.g., the host navigates to a different game), `update` would still close over the old `gameId` — but since `update` builds the URL as `/api/host/questions/${id}` (no gameId in the PUT path), the missing `gameId` is actually harmless for PUT requests. However, this is a latent inconsistency with `create`, `remove`, and `reorder` which all include `gameId`.
-
-**Fix:**
-```typescript
-}, [gameId, password, refetch]);   // add gameId
-```
-
----
+**Fix:** Keep the existence pre-read. Add a `status === 404` branch to
+`errorToastForStatus` with a distinct, diagnosable message, e.g.
+"Jocul nu a fost gasit — verifica configurarea." so a misconfigured `gameId` is
+recognizable on-site.
 
 ## Info
 
-### IN-01: `useHostAuth` — password stored in `sessionStorage` before reading response body
+### IN-01: Duplicated UUID-validation and idempotent-read/broadcast boilerplate across host routes
 
-**File:** `src/hooks/useHostAuth.ts:55-56`
+**File:** `src/app/api/host/transition/route.ts:37-42`, `src/app/api/host/reset/route.ts:35-40`
+**Issue:** `UUID_REGEX` + `isValidUuid` are copy-pasted verbatim between
+`transition/route.ts` and `reset/route.ts`, and the "read phase → short-circuit on
+no-op → write → best-effort `GAME_ENDED` broadcast" shape is now repeated three times
+inside `transition/route.ts` (`force_end`, `reset_game`, and the standard CAS path).
+Acceptable today but drifting toward maintenance risk as host actions accumulate.
+**Fix:** Extract `isValidUuid` to a shared module and consider a small
+`endGameBroadcast(gameId)` helper for the repeated `GAME_ENDED` emit. Low priority.
 
-**Issue:** On a successful auth probe, the password is persisted to `sessionStorage` and `setPassword(pw)` is called immediately on any non-401 status code — including 500 (server error) and 405 (method not allowed). While the design deliberately treats all non-401 as "accepted" (because the questions endpoint might not yet exist), a transient 500 during auth probe would grant dashboard access. This is documented in the hook (`any other status (200, 404, 405) = accepted`) but is worth noting: in the final deployed state, the probe endpoint (`/api/host/questions`) will reliably return either 401 (wrong password) or 200 (correct password), making this a non-issue in practice. The `"use client"` directive and file are both correct.
+### IN-02: `satisfies GameEvent as Record<string, unknown>` double-cast repeated seven times
 
-**Suggestion:** If robustness is desired, treat 5xx as a network error rather than an auth success:
-```typescript
-if (res.status === 401) {
-  setError("Parola gresita. Incearca din nou.");
-} else if (res.status >= 500) {
-  setError("Eroare de server. Incearca din nou.");
-} else {
-  sessionStorage.setItem(SESSION_KEY, pw);
-  setPassword(pw);
-}
-```
+**File:** `src/app/api/host/transition/route.ts:146, 197, 310, 315, 321, 327, 332`
+**Issue:** Every `broadcast` call launders a typed payload through
+`{ ... } satisfies GameEvent as Record<string, unknown>` because `broadcast`'s param is
+`Record<string, unknown>`. It is type-safe but verbose and repeated.
+**Fix:** Make `broadcast` generic / accept `GameEvent` directly so callers drop the
+`as Record<string, unknown>`. Cosmetic.
 
----
+### IN-03: `reset_game` success toast is identical for a real wipe and an already-lobby no-op
 
-### IN-02: `QuestionRow` — correct-option pills not aria-disabled when `isDraft`
-
-**File:** `src/components/host/QuestionRow.tsx:258-276`
-
-**Issue:** The correct-option A/B buttons have `disabled={isDraft}` (line 262, 268) which correctly prevents interaction in draft mode. However, both buttons also display `aria-pressed` based on `question.correct_option` which for a draft will always be `null`. A screen reader will announce both as "not pressed" without context that they are unavailable because the question hasn't been saved yet. The `aria-disabled` attribute is not set.
-
-**Suggestion:** Add `aria-disabled={isDraft}` alongside `disabled={isDraft}` for screen reader parity.
-
----
-
-### IN-03: `DistributionBar` standalone — `aria-valuemax` always equals `aria-valuenow`
-
-**File:** `src/components/host/DistributionBar.tsx:27-30`
-
-**Issue:** The `role="meter"` element has `aria-valuenow={total}` and `aria-valuemax={total}`. These being equal means a screen reader would always announce "100% full" regardless of the actual answer count. The meter semantics are: valuenow = current value, valuemin = 0, valuemax = expected/possible maximum. Since we don't know the total possible answers (participant count), the best option is to either (a) pass `participantCount` as an optional max prop and use it when available, or (b) drop the meter role and use `aria-label` only.
-
-**Suggestion:**
-```typescript
-// Option (b) — simpler, correct:
-<div
-  role="img"
-  aria-label={`Raspunsuri: A ${a}, B ${b}, total ${a + b}`}
-  className="relative w-full overflow-hidden rounded-full bg-ink-muted/50"
-  style={{ height }}
->
-```
+**File:** `src/components/host/EmergencyPanel.tsx:113-120`, `src/app/api/host/transition/route.ts:176-178`
+**Issue:** When the game is already in `lobby`, the route returns `{ noop: true }` (200)
+and the client shows the same "Jocul a fost resetat..." success toast as a real wipe.
+This is correct idempotent UX, but the host gets positive confirmation of a destructive
+reset even when nothing was deleted, which could also mask the WR-01 race (a reset that
+landed as a no-op because the phase already moved).
+**Fix:** Optional — read the `noop` flag from the response body and show a softer
+"Jocul era deja in asteptare." message to distinguish the two outcomes.
 
 ---
 
-_Reviewed: 2026-06-03T18:27:55Z_
+_Reviewed: 2026-06-04T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

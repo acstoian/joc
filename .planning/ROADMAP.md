@@ -190,7 +190,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The leaderboard screen shows ranked players after each reveal; the winner screen appears at game end with cinematic presentation
   5. When the host triggers a cosmetic countdown, the display shows a countdown overlay (e.g. 3-2-1) with visual tension before the next phase begins
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1**
+
+  - [x] 06-01-PLAN.md — Foundation + Lobby slice: Wave-0 infra (slide-up/fade-scale keyframes, useGameSync onEvent callback, POST /api/host/countdown) + DisplayPage shell + LobbyDisplay/LoadingDisplay/DisplayStatusDot + fullscreen button (DISP-01, DISP-02)
+
+**Wave 2** *(blocked on 06-01)*
+
+  - [ ] 06-02-PLAN.md — Gameplay slice: QuestionDisplay (slide-up) + LockedDisplay (live A/B bars) + RevealDisplay (gold-glow correct + top-5 leaderboard) (DISP-03, DISP-04, DISP-05, DISP-06)
+  - [ ] 06-03-PLAN.md — Winner + Countdown slice: WinnerDisplay (#1 hero + full leaderboard) + CountdownOverlay (3→2→1) + ControlTab "Numărătoare inversă" button (DISP-07, DISP-08)
+
 **UI hint**: yes
 
 ### Phase 7: Polish & Pre-Event Hardening
@@ -220,5 +230,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Server Write Path & State Machine | 5/5 | Complete    | 2026-06-03 |
 | 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
 | 5. Guest App | 3/3 | Complete   | 2026-06-04 |
-| 6. TV Display Mode | 0/TBD | Not started | - |
+| 6. TV Display Mode | 1/3 | In Progress|  |
 | 7. Polish & Pre-Event Hardening | 0/TBD | Not started | - |
