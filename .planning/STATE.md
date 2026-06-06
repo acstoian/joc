@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-01)
+See: .planning/PROJECT.md (updated 2026-06-06 after v1.0 milestone)
 
 **Core value:** During a live wedding, the room stays in sync and the game feels instant and fun — host actions update every phone and the TV together within ~1s, no refreshes, no lost players.
-**Current focus:** Phase 07 — polish-pre-event-hardening
+**Current focus:** Milestone v1.0 COMPLETE. Live event: 26 September 2026. Next: /gsd-new-milestone for v2 if needed.
 
 ## Current Position
 
@@ -103,9 +103,15 @@ None yet.
 
 ## Deferred Items
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
+Items acknowledged and deferred at milestone close on 2026-06-06:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat | Phase 06 — 06-HUMAN-UAT.md partial (7 pending scenarios) | attested via production dry run (all 13 checks passed) |
+| verification | Phase 05 — 05-VERIFICATION.md human_needed | attested via production dry run |
+| verification | Phase 06 — 06-VERIFICATION.md human_needed | attested via production dry run |
+
+Known deferred items at close: 3 (all attested by production dry run — user confirmed "everything works")
 
 ## Session Continuity
 
