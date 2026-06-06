@@ -20,7 +20,7 @@
  *   - Phase "locked" with no local answer: both buttons disabled opacity-60
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { GAME_ID } from "@/lib/host/constants";
@@ -70,11 +70,11 @@ function getButtonClass(
     );
   }
 
-  // Unselected — locked out after host locks; dimmed-but-tappable during "question" (change answer)
+  // Unselected — locked out after host locks; fully interactive during "question" (change answer)
   if (phase === "locked") {
     return cn(baseLayout, "glass opacity-40 pointer-events-none");
   }
-  return cn(baseLayout, "glass opacity-50 cursor-pointer");
+  return cn(baseLayout, "glass cursor-pointer active:scale-[0.97]");
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -84,14 +84,18 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
   const [localAnswer, setLocalAnswer] = useState<Choice | null>(null);
   const shouldReduce = useReducedMotion();
 
-  // PLAY-03: seed from authoritative state on reconnect/refresh (Pitfall 6)
-  // Only when localAnswer is null — avoids overwriting an in-flight optimistic change
-  // with stale server state before the upsert confirms.
+  // PLAY-03: seed from authoritative state on reconnect/refresh (Pitfall 6).
+  // Runs only when state.myAnswer changes. Uses a ref snapshot of localAnswer
+  // instead of adding it to deps — adding localAnswer would re-run this effect
+  // on every tap, creating a window where stale server state overwrites the
+  // optimistic selection before the upsert confirms.
+  const localAnswerRef = useRef(localAnswer);
+  localAnswerRef.current = localAnswer;
   useEffect(() => {
-    if (state.myAnswer && localAnswer === null) {
+    if (state.myAnswer && localAnswerRef.current === null) {
       setLocalAnswer(state.myAnswer);
     }
-  }, [state.myAnswer, localAnswer]);
+  }, [state.myAnswer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle A or B tap — optimistic update + fire-and-forget POST (upsert on server)
   async function handleTap(choice: Choice) {
