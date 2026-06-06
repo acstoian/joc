@@ -96,10 +96,31 @@ h1, h2, h3, h4, h5, h6 {
   to   { opacity: 1;   transform: scale(1); }
 }
 
+/* ── Waiting dots — lobby, locked state ── */
+@keyframes dot-bounce {
+  0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
+  40%            { opacity: 1;  transform: translateY(-4px); }
+}
+.dot-1 { animation: dot-bounce 1.4s ease-in-out 0s      infinite; }
+.dot-2 { animation: dot-bounce 1.4s ease-in-out 0.18s   infinite; }
+.dot-3 { animation: dot-bounce 1.4s ease-in-out 0.36s   infinite; }
+
+/* ── Ring pulse — selected answer button ── */
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0    rgba(212,168,67,0.45); }
+  70%  { box-shadow: 0 0 0 10px rgba(212,168,67,0); }
+  100% { box-shadow: 0 0 0 0    rgba(212,168,67,0); }
+}
+.ring-pulse { animation: ring-pulse 2s ease-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   @keyframes slide-up  { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
   @keyframes fade-scale { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
   .animate-pulse { animation: none; }
+  /* Waiting dots: static, dim but visible */
+  .dot-1, .dot-2, .dot-3 { animation: none; opacity: 0.5; transform: none; }
+  /* Ring pulse: no animation */
+  .ring-pulse { animation: none; }
   /* Prevent invisible text when gradient is stripped (Pitfall 7) */
   .text-gradient-gold {
     background: none;

@@ -60,7 +60,7 @@ export function WinnerDisplay({ state }: { state: GameStateSnapshot }) {
         colors: ["#f0c060", "#f5e6c8", "#d4a843", "#e8a0a0"],
       });
     });
-  }, []);
+  }, [shouldReduce]);
 
   // Guard against empty leaderboard
   const winner = state.leaderboard[0] ?? null;

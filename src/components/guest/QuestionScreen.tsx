@@ -22,6 +22,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GAME_ID } from "@/lib/host/constants";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
@@ -39,17 +40,21 @@ interface QuestionScreenProps {
 
 // ── Button class derivation ────────────────────────────────────────────────────
 
+/**
+ * Outer button wrapper — horizontal layout, large letter badge on the left.
+ * min-h-[88px] keeps the touch target well above 44px and feels game-show sized.
+ */
 function getButtonClass(
   choice: Choice,
   localAnswer: Choice | null,
   phase: string
 ): string {
   const baseLayout =
-    "w-full min-h-[120px] rounded-xl flex flex-col items-center justify-center gap-2 px-6 py-6 transition-transform duration-100 [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50";
+    "relative w-full min-h-[88px] rounded-xl flex flex-row items-center gap-4 px-5 py-4 transition-all duration-150 [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50";
 
   // Phase "locked" and this guest never answered — both buttons disabled
   if (phase === "locked" && localAnswer === null) {
-    return cn(baseLayout, "glass opacity-60 pointer-events-none cursor-not-allowed");
+    return cn(baseLayout, "glass opacity-50 pointer-events-none cursor-not-allowed");
   }
 
   if (localAnswer === null) {
@@ -58,23 +63,50 @@ function getButtonClass(
   }
 
   if (choice === localAnswer) {
-    // Selected — gold treatment (D-05)
+    // Selected — gold treatment + ring-pulse (D-05)
     // Re-tappable during "question"; immutable once host locks
     return cn(
       baseLayout,
-      "glass-gold",
-      "border-2 border-gold",
-      "text-gold-bright",
-      "shadow-[0_0_12px_0_rgba(212,168,67,0.4)]",
-      phase === "locked" ? "cursor-not-allowed" : "cursor-pointer"
+      "glass-gold border-2 border-gold",
+      phase === "locked"
+        ? "cursor-not-allowed"
+        : "cursor-pointer ring-pulse"
     );
   }
 
-  // Unselected — locked out after host locks; fully interactive during "question" (change answer)
+  // Unselected after a selection was made
   if (phase === "locked") {
-    return cn(baseLayout, "glass opacity-40 pointer-events-none");
+    return cn(baseLayout, "glass opacity-35 pointer-events-none");
   }
-  return cn(baseLayout, "glass cursor-pointer");
+  // Still tappable during "question" — dimmed to show it's not chosen
+  return cn(baseLayout, "glass opacity-60 cursor-pointer");
+}
+
+/**
+ * Letter badge (A / B) inside each button — the dominant visual element.
+ * 48×48px circle, solid gold when selected, outlined when idle/unselected.
+ */
+function getLetterBadgeClass(
+  choice: Choice,
+  localAnswer: Choice | null,
+  phase: string
+): string {
+  const base =
+    "w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold font-heading shrink-0 transition-all duration-150";
+
+  if (phase === "locked" && localAnswer === null) {
+    return cn(base, "border-2 border-champagne/20 text-champagne/40");
+  }
+
+  if (localAnswer === null) {
+    return cn(base, "border-2 border-champagne/30 text-champagne/80");
+  }
+
+  if (choice === localAnswer) {
+    return cn(base, "bg-gold text-ink border-2 border-gold");
+  }
+
+  return cn(base, "border-2 border-champagne/15 text-champagne/25");
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -95,7 +127,7 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
     if (state.myAnswer && localAnswerRef.current === null) {
       setLocalAnswer(state.myAnswer);
     }
-  }, [state.myAnswer]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.myAnswer]);
 
   // Handle A or B tap — optimistic update + fire-and-forget POST (upsert on server)
   async function handleTap(choice: Choice) {
@@ -126,7 +158,12 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
   const isLocked = state.phase === "locked";
 
   return (
-    <main className="relative min-h-dvh bg-ink flex flex-col gap-6 px-4 pt-12 pb-[env(safe-area-inset-bottom)]">
+    <motion.main
+      className="relative min-h-dvh bg-ink flex flex-col gap-6 px-4 pt-12 pb-[env(safe-area-inset-bottom)]"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+    >
       <SyncStatusBadge status={status} />
 
       {/* Content column — centered vertically */}
@@ -136,35 +173,45 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
           Întrebarea
         </p>
 
-        {/* Question body — use .body field per GameStateSnapshot shape */}
+        {/* Question body */}
         <h2 className="font-heading text-xl font-bold text-champagne text-center leading-snug px-2">
           {q?.body ?? "Se încarcă întrebarea..."}
         </h2>
 
-        {/* A/B buttons — full-width stacked, gap-4 between them (D-04) */}
+        {/* A/B buttons — full-width stacked (D-04) */}
         <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+
           {/* Button A */}
           <motion.button
             type="button"
             className={getButtonClass("A", localAnswer, state.phase)}
             onClick={() => handleTap("A")}
-            whileTap={shouldReduce ? undefined : { scale: 0.96 }}
+            whileTap={shouldReduce ? undefined : { scale: 0.97 }}
             transition={{ duration: 0.1, ease: "easeOut" }}
             aria-pressed={localAnswer === "A"}
             aria-disabled={isLocked && localAnswer !== "A"}
             aria-label={`Opțiunea A: ${q?.optionA ?? "A"}`}
           >
-            <span className="text-xs text-champagne-dim/70 uppercase tracking-widest">
+            {/* Large letter badge — primary visual anchor */}
+            <span className={getLetterBadgeClass("A", localAnswer, state.phase)}>
               A
             </span>
+            {/* Option text — left-aligned beside the badge */}
             <span
               className={cn(
-                "text-base text-center",
-                localAnswer === "A" ? "text-gold-bright" : "text-champagne"
+                "text-base text-left flex-1 leading-snug",
+                localAnswer === "A" ? "text-gold-bright font-semibold" : "text-champagne"
               )}
             >
               {q?.optionA ?? "A"}
             </span>
+            {/* Lock icon — indicates selected answer is now immutable */}
+            {isLocked && localAnswer === "A" && (
+              <Lock
+                className="size-4 text-gold/50 shrink-0"
+                aria-hidden="true"
+              />
+            )}
           </motion.button>
 
           {/* Button B */}
@@ -172,36 +219,49 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
             type="button"
             className={getButtonClass("B", localAnswer, state.phase)}
             onClick={() => handleTap("B")}
-            whileTap={shouldReduce ? undefined : { scale: 0.96 }}
+            whileTap={shouldReduce ? undefined : { scale: 0.97 }}
             transition={{ duration: 0.1, ease: "easeOut" }}
             aria-pressed={localAnswer === "B"}
             aria-disabled={isLocked && localAnswer !== "B"}
             aria-label={`Opțiunea B: ${q?.optionB ?? "B"}`}
           >
-            <span className="text-xs text-champagne-dim/70 uppercase tracking-widest">
+            <span className={getLetterBadgeClass("B", localAnswer, state.phase)}>
               B
             </span>
             <span
               className={cn(
-                "text-base text-center",
-                localAnswer === "B" ? "text-gold-bright" : "text-champagne"
+                "text-base text-left flex-1 leading-snug",
+                localAnswer === "B" ? "text-gold-bright font-semibold" : "text-champagne"
               )}
             >
               {q?.optionB ?? "B"}
             </span>
+            {isLocked && localAnswer === "B" && (
+              <Lock
+                className="size-4 text-gold/50 shrink-0"
+                aria-hidden="true"
+              />
+            )}
           </motion.button>
         </div>
 
-        {/* Waiting state — shown after lock (PLAY-04) */}
+        {/* Locked waiting state — animated dots + label (PLAY-04) */}
         {isLocked && (
-          <div className="text-center mt-4">
-            <div className="thin-divider" />
-            <p className="text-sm text-champagne-dim/70 mt-3">
+          <div className="flex flex-col items-center gap-3 mt-2">
+            <div
+              className="flex items-center gap-2"
+              aria-hidden="true"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-gold/50 dot-1" />
+              <span className="w-1.5 h-1.5 rounded-full bg-gold/50 dot-2" />
+              <span className="w-1.5 h-1.5 rounded-full bg-gold/50 dot-3" />
+            </div>
+            <p className="text-sm text-champagne-dim/60">
               Aștepți dezvăluirea...
             </p>
           </div>
         )}
       </div>
-    </main>
+    </motion.main>
   );
 }

@@ -34,11 +34,16 @@ export function LobbyDisplay({ participantCount }: LobbyDisplayProps) {
   }, [participantCount]);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-[2vh] bg-ink px-[8vw]">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-[2.5vh] bg-ink px-[8vw]">
       {/* Game title */}
-      <h1 className="text-[6vw] font-bold font-heading text-gradient-gold text-center leading-tight">
-        Joc — Cristina &amp; Andrei
+      <h1 className="text-[7vw] font-bold font-heading text-gradient-gold text-center leading-tight">
+        Joc
       </h1>
+
+      {/* Wedding subtitle */}
+      <p className="text-[2vw] font-normal font-body text-champagne-dim/70 text-center">
+        Cristina &amp; Andrei · 26.09.2026
+      </p>
 
       {/* Thin gold rule */}
       <div className="thin-divider" />
@@ -47,7 +52,7 @@ export function LobbyDisplay({ participantCount }: LobbyDisplayProps) {
       <div className="flex flex-col items-center gap-[1vh]">
         <span
           className={cn(
-            "text-[4vw] font-bold font-heading text-champagne transition-colors duration-300",
+            "text-[8vw] font-bold font-heading text-champagne tabular-nums transition-colors duration-300",
             pulsing && "animate-pulse"
           )}
           aria-live="polite"
@@ -55,15 +60,25 @@ export function LobbyDisplay({ participantCount }: LobbyDisplayProps) {
         >
           {participantCount}
         </span>
-        <span className="text-[1.5vw] font-normal font-body text-champagne-dim">
+        <span className="text-[2vw] font-normal font-body text-champagne-dim">
           {participantCount === 1
             ? "jucător s-a alăturat"
             : "jucători s-au alăturat"}
         </span>
       </div>
 
+      {/* Animated waiting dots */}
+      <div
+        className="flex items-center gap-[0.8vw] mt-[1vh]"
+        aria-hidden="true"
+      >
+        <span className="w-[0.6vw] h-[0.6vw] rounded-full bg-gold/50 dot-1" />
+        <span className="w-[0.6vw] h-[0.6vw] rounded-full bg-gold/50 dot-2" />
+        <span className="w-[0.6vw] h-[0.6vw] rounded-full bg-gold/50 dot-3" />
+      </div>
+
       {/* Waiting subtitle */}
-      <p className="text-[1.5vw] font-normal font-body text-champagne-dim/60 mt-[2vh]">
+      <p className="text-[1.5vw] font-normal font-body text-champagne-dim/50">
         Așteptăm să înceapă...
       </p>
     </div>
