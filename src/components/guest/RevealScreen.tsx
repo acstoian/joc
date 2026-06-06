@@ -18,6 +18,8 @@
  * Leaderboard: <LeaderboardPanel> self-hides when empty (D-08).
  */
 
+import { useEffect, useRef } from "react";
+import { useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle } from "lucide-react";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
@@ -72,6 +74,29 @@ function getPct(count: number, total: number): number {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function RevealScreen({ state, status }: RevealScreenProps) {
+  const confettiFired = useRef(false);
+  const shouldReduce = useReducedMotion();
+
+  // Correct-answer mini confetti burst — fires once on mount (D-08).
+  // CRITICAL: GameStateSnapshot has NO playerAnsweredCorrectly field.
+  // Derive correctness from myAnswer + correctOption (verified RESEARCH.md §CRITICAL FINDING).
+  useEffect(() => {
+    const answeredCorrectly =
+      state.myAnswer !== null && state.myAnswer === state.correctOption;
+    if (!answeredCorrectly) return;
+    if (shouldReduce) return;
+    if (confettiFired.current) return;
+    confettiFired.current = true;
+    import("canvas-confetti").then(({ default: confetti }) => {
+      confetti({
+        particleCount: 60,
+        spread: 50,
+        origin: { y: 0.6 },
+        colors: ["#f0c060", "#f5e6c8", "#d4a843"],
+      });
+    });
+  }, []); // empty deps — fires once on mount; state captured via closure
+
   const q = state.currentQuestion;
 
   // Distribution — guard against null
