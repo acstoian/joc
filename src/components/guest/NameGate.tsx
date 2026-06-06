@@ -75,7 +75,7 @@ export function NameGate({
     >
       <Card className="w-full max-w-[360px] border-0 shadow-2xl glass">
         <CardHeader className="pb-4 text-center gap-1">
-          <h1 className="font-heading text-2xl font-bold text-champagne leading-tight">
+          <h1 className="font-heading text-2xl font-bold text-gradient-gold leading-tight">
             Joc — Cristina &amp; Andrei
           </h1>
           <p className="text-sm text-champagne-dim/70">Joc live de nuntă</p>
