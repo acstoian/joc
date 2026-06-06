@@ -36,7 +36,7 @@ export function LobbyDisplay({ participantCount }: LobbyDisplayProps) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-[2vh] bg-ink px-[8vw]">
       {/* Game title */}
-      <h1 className="text-[6vw] font-bold font-heading text-champagne text-center leading-tight">
+      <h1 className="text-[6vw] font-bold font-heading text-gradient-gold text-center leading-tight">
         Joc — Cristina &amp; Andrei
       </h1>
 

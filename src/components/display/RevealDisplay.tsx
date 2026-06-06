@@ -9,20 +9,45 @@
  *   - Incorrect option wrapper: opacity-40
  *   - Correct bar fill: bg-gold-bright instead of bg-gold
  *
- * After the bars: .thin-divider + LeaderboardPanel with top-5 entries.
+ * After the bars: .thin-divider + staggered top-5 leaderboard (inline motion.ol/li, D-03).
+ * Reduced-motion: plain <ol>/<li> list with no stagger.
  *
  * Critical corrections applied:
  *   - Guards state.distribution against null (correction #4)
  *   - Guards state.correctOption (correction #5) — null-safe but will be set in revealed phase
  *   - Uses state.currentQuestion?.body (correction #1)
  *   - static "Întrebarea" label (correction #3)
- *   - LeaderboardPanel imported unmodified from @/components/guest/LeaderboardPanel
+ *   - LeaderboardPanel replaced by inline stagger (Plan 07-02)
  *   - No new files created — OptionWithBar defined locally within this file
  */
 
+import { motion, useReducedMotion } from "motion/react";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { GameStateSnapshot } from "@/hooks/useGameSync";
-import { LeaderboardPanel } from "@/components/guest/LeaderboardPanel";
+
+// ── Local rank helpers (copied from LeaderboardPanel — do not import from there) ──
+
+function getRankClasses(rank: number): string {
+  if (rank === 1) return "text-gold-bright font-bold";
+  if (rank <= 3) return "text-champagne";
+  return "text-champagne-dim";
+}
+
+function getScoreClasses(rank: number): string {
+  if (rank === 1) return "text-gold-bright font-bold";
+  return "text-gold";
+}
+
+const containerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+
+const rowVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" as const } },
+};
 
 // ── Internal helper ────────────────────────────────────────────────────────────
 
@@ -69,11 +94,11 @@ function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps)
           {option}
         </span>
 
-        {/* Option text — gold-bright on correct */}
+        {/* Option text — gradient on correct */}
         <span
           className={cn(
             "text-[2vw] font-normal font-body text-center",
-            isCorrect ? "text-gold-bright" : "text-champagne"
+            isCorrect ? "text-gradient-gold" : "text-champagne"
           )}
         >
           {text}
@@ -111,6 +136,7 @@ function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps)
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
+  const shouldReduce = useReducedMotion();
   const q = state.currentQuestion;
 
   // Guard distribution against null (correction #4)
@@ -162,13 +188,60 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
         />
       </div>
 
-      {/* After-reveal top-5 leaderboard (DISP-06, D-05) */}
+      {/* After-reveal top-5 leaderboard (DISP-06, D-05, D-03) — staggered */}
       <div className="w-full max-w-[55vw] mx-auto">
         <div className="thin-divider" />
-        {/* Scale wrapper: LeaderboardPanel uses mobile sizes; scale up for TV readability.
+        {/* Scale wrapper: inline list uses mobile sizes; scale up for TV readability.
             Container capped at 55vw so 1.5× output stays within ~83vw (overflow-hidden safe). */}
         <div className="transform scale-150 origin-top">
-          <LeaderboardPanel leaderboard={state.leaderboard.slice(0, 5)} />
+          {state.leaderboard.length > 0 && (
+            <div className="flex flex-col gap-0 w-full max-w-md mx-auto mt-6">
+              <h3 className="text-base font-bold font-heading text-champagne text-center mb-4">
+                Clasament
+              </h3>
+              {shouldReduce ? (
+                <ol role="list" className="flex flex-col">
+                  {state.leaderboard.slice(0, 5).map((entry, index) => {
+                    const rank = index + 1;
+                    const isLast = index === Math.min(5, state.leaderboard.length) - 1;
+                    return (
+                      <li key={`${entry.name}-${rank}`}>
+                        <div className="flex items-center gap-3 py-3 px-2">
+                          <span className="text-sm text-champagne-dim w-6 text-right shrink-0">#{rank}</span>
+                          <span className={`flex-1 text-base truncate ${getRankClasses(rank)}`}>{entry.name}</span>
+                          <span className={`text-sm ${getScoreClasses(rank)} shrink-0`}>{entry.score} pt</span>
+                        </div>
+                        {!isLast && <Separator className="bg-champagne/10" />}
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <motion.ol
+                  role="list"
+                  className="flex flex-col"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {state.leaderboard.slice(0, 5).map((entry, index) => {
+                    const rank = index + 1;
+                    const isLast = index === Math.min(5, state.leaderboard.length) - 1;
+                    return (
+                      <motion.li key={`${entry.name}-${rank}`} variants={rowVariants}>
+                        <div className="flex items-center gap-3 py-3 px-2">
+                          <span className="text-sm text-champagne-dim w-6 text-right shrink-0">#{rank}</span>
+                          <span className={`flex-1 text-base truncate ${getRankClasses(rank)}`}>{entry.name}</span>
+                          <span className={`text-sm ${getScoreClasses(rank)} shrink-0`}>{entry.score} pt</span>
+                        </div>
+                        {!isLast && <Separator className="bg-champagne/10" />}
+                      </motion.li>
+                    );
+                  })}
+                </motion.ol>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
