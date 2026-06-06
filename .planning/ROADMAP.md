@@ -219,7 +219,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 1**
 
-  - [ ] 07-01-PLAN.md — Foundation: .text-gradient-gold CSS utility + TV AnimatePresence slide+fade phase transitions (D-01, D-02, D-05/06/07; RT-07)
+  - [x] 07-01-PLAN.md — Foundation: .text-gradient-gold CSS utility + TV AnimatePresence slide+fade phase transitions (D-01, D-02, D-05/06/07; RT-07)
 
 **Wave 2** *(blocked on 07-01)*
 
@@ -245,4 +245,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
 | 5. Guest App | 3/3 | Complete   | 2026-06-04 |
 | 6. TV Display Mode | 3/3 | Complete    | 2026-06-05 |
-| 7. Polish & Pre-Event Hardening | 0/4 | Planned | - |
+| 7. Polish & Pre-Event Hardening | 1/4 | In Progress|  |
