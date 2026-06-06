@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Host Dashboard** - Auth gate, phase controls, question CRUD + reorder, live stats, emergency recovery (completed 2026-06-03)
 - [x] **Phase 5: Guest App** - Join + lobby + QR, A/B tap UX, lock state, reveal + leaderboard + end views (completed 2026-06-04)
 - [x] **Phase 6: TV Display Mode** - /display cinematic landscape route with all screens and host-initiated countdown (completed 2026-06-05)
-- [ ] **Phase 7: Polish & Pre-Event Hardening** - Wedding aesthetic, animation audit, performance validation, mandatory dry run
+- [x] **Phase 7: Polish & Pre-Event Hardening** - Wedding aesthetic, animation audit, performance validation, mandatory dry run (completed 2026-06-06)
 
 ## Phase Details
 
@@ -228,7 +228,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on 07-01, 07-02, 07-03)*
 
-  - [ ] 07-04-PLAN.md — Hardening: 60fps performance audit + MANDATORY production dry run on 5+ real devices (RT-08)
+  - [x] 07-04-PLAN.md — Hardening: 60fps performance audit + MANDATORY production dry run on 5+ real devices (RT-08)
 
 **UI hint**: yes
 
@@ -245,4 +245,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
 | 5. Guest App | 3/3 | Complete   | 2026-06-04 |
 | 6. TV Display Mode | 3/3 | Complete    | 2026-06-05 |
-| 7. Polish & Pre-Event Hardening | 3/4 | In Progress|  |
+| 7. Polish & Pre-Event Hardening | 4/4 | Complete    | 2026-06-06 |
