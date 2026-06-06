@@ -12,19 +12,19 @@ import { adminClient } from "@/lib/supabase/admin";
  * Two-layer dedup (Pattern 3):
  *   Layer 1 — Phase guard (SCOR-04): games.phase must be 'question' → 403 if not.
  *     ONLY 'question' is open — 'lobby' is NOT accepted (unlike the skeleton open-phases set).
- *   Layer 2 — DB dedup (SCOR-03): UNIQUE(player_id, question_id) constraint;
- *     error.code === "23505" → 409; no second row is ever created.
+ *   Layer 2 — DB upsert (SCOR-03): INSERT ... ON CONFLICT (player_id, question_id) DO UPDATE SET choice.
+ *     Guests may change their answer any number of times before the host locks.
+ *     409 is no longer returned — the upsert replaces the previous choice atomically.
  *
  * Request body: { gameId: UUID, deviceToken: UUID, choice: "A" | "B" }
  * Responses:
- *   200 { ok: true }                          — answer recorded
+ *   200 { ok: true }                          — answer recorded or updated
  *   400 { error: "gameId required" }          — malformed gameId
  *   400 { error: "deviceToken required" }     — malformed deviceToken
  *   400 { error: "choice required" }          — choice not "A" or "B"
  *   403 { error: "answers_locked", phase }   — phase != 'question' (SCOR-04)
  *   404 { error: "game_not_found" }           — gameId not in DB
  *   404 { error: "player_not_found" }         — no player for this device in this game
- *   409 { error: "already_answered" }         — UNIQUE(player_id, question_id) violation
  *   500 { error: "answer_failed", detail }    — unexpected DB error
  *
  * Security:
@@ -114,49 +114,46 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "player_not_found" }, { status: 404 });
   }
 
-  // ── LAYER 2: DB dedup (SCOR-03) ───────────────────────────────────────────
-  // Insert answer with the server-resolved player_id and current_question_id.
-  // The UNIQUE(player_id, question_id) constraint rejects duplicates atomically.
-  // error.code === "23505" = PostgreSQL unique_violation SQLSTATE.
-  //
-  // Capture the question_id this insert was bound to (the snapshot from step 1)
-  // so the WR-01 re-check below can confirm the round did not advance underneath us.
+  // Capture the question_id this upsert is bound to so WR-01 can confirm the
+  // round did not advance underneath us.
   const answeredQuestionId = game.current_question_id!;
 
-  const { data: inserted, error: insertError } = await adminClient
+  // ── Pre-upsert snapshot (WR-01 insert-vs-update distinction) ─────────────
+  // Read the existing answer BEFORE the upsert so WR-01 can distinguish a new
+  // insert (should be deleted on race) from an update (restore prior choice).
+  const { data: existingAnswer } = await adminClient
     .from("answers")
-    .insert({
-      player_id: player.id,
-      question_id: answeredQuestionId,
-      choice,
-    })
+    .select("id, choice")
+    .eq("player_id", player.id)
+    .eq("question_id", answeredQuestionId)
+    .maybeSingle();
+
+  // ── LAYER 2: DB upsert (SCOR-03 + change-answer support) ─────────────────
+  // INSERT ... ON CONFLICT (player_id, question_id) DO UPDATE SET choice.
+  // Guests may change their answer freely until the host locks.
+  const { data: upserted, error: upsertError } = await adminClient
+    .from("answers")
+    .upsert(
+      { player_id: player.id, question_id: answeredQuestionId, choice },
+      { onConflict: "player_id,question_id" }
+    )
     .select("id")
     .single();
 
-  if (insertError) {
-    if (insertError.code === "23505") {
-      // UNIQUE(player_id, question_id) violation — already answered this question.
-      // No second row was created.
-      return NextResponse.json(
-        { error: "already_answered" },
-        { status: 409 }
-      );
-    }
+  if (upsertError) {
     return NextResponse.json(
-      { error: "answer_failed", detail: insertError.message },
+      { error: "answer_failed", detail: upsertError.message },
       { status: 500 }
     );
   }
 
-  // ── WR-01: close the check-then-insert race ───────────────────────────────
-  // The phase guard above is a check-then-insert: a concurrent host `lock`
-  // can flip phase 'question' -> 'locked' (and/or advance current_question_id)
-  // between the step-1 read and this insert, letting a late answer slip in.
-  // PostgREST has no conditional-insert primitive, so we re-read the game AFTER
-  // the insert and reject if the round moved: the host's lock UPDATE and this
-  // re-read serialize at the DB, so a lock that committed before our read is
-  // always observed here. If the round advanced, delete the just-inserted row
-  // (compensating action) so no answer is counted under a locked/changed round.
+  // ── WR-01: close the check-then-upsert race ───────────────────────────────
+  // A concurrent host `lock` can flip phase 'question' -> 'locked' between the
+  // phase guard above and this upsert. Re-read the game after upsert and undo
+  // if the round moved. Distinguish insert vs update:
+  //   - New insert: delete the row (late answer must not count).
+  //   - Update: restore the previous choice (the prior answer was valid; the
+  //     change arrived too late and the host's view of the round stands).
   const { data: gameAfter } = await adminClient
     .from("games")
     .select("phase, current_question_id")
@@ -168,9 +165,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     gameAfter.phase !== "question" ||
     gameAfter.current_question_id !== answeredQuestionId
   ) {
-    // Round advanced concurrently — undo the late insert and report locked.
-    if (inserted?.id) {
-      await adminClient.from("answers").delete().eq("id", inserted.id);
+    if (!existingAnswer) {
+      // Late first-time insert — remove it entirely
+      if (upserted?.id) {
+        await adminClient.from("answers").delete().eq("id", upserted.id);
+      }
+    } else {
+      // Late change — restore the answer the guest had before they changed it
+      await adminClient
+        .from("answers")
+        .update({ choice: existingAnswer.choice })
+        .eq("id", existingAnswer.id);
     }
     return NextResponse.json(
       { error: "answers_locked", phase: gameAfter?.phase ?? "locked" },

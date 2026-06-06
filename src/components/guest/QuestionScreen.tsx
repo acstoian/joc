@@ -8,14 +8,15 @@
  *
  * Lock logic:
  *   - localAnswer starts null; seeded from state.myAnswer on reconnect/refresh (PLAY-03)
- *   - First tap: optimistic lock + POST /api/game/answer with deviceToken + choice
- *   - Second tap: no-ops immediately (localAnswer !== null guard, PLAY-02)
- *   - 403 (answers_locked) and 409 (already_answered) are expected — keep optimistic lock
+ *   - Any tap during "question" phase: optimistic update + POST /api/game/answer (upsert)
+ *   - Tap during "locked" phase: no-op — host has locked, no changes allowed
+ *   - 403 (answers_locked) are expected on race; keep optimistic state
  *
  * Button styling (D-05):
  *   - Idle (localAnswer === null, phase "question"): .glass + champagne text
- *   - Selected (choice === localAnswer): glass-gold + border-gold + gold text glow
- *   - Unselected (choice !== localAnswer): opacity-40 pointer-events-none
+ *   - Selected (choice === localAnswer, phase "question"): glass-gold + gold glow, re-tappable
+ *   - Unselected (choice !== localAnswer, phase "question"): opacity-50, still tappable (change answer)
+ *   - Phase "locked": selected stays gold (cursor-not-allowed), unselected opacity-40 pointer-events-none
  *   - Phase "locked" with no local answer: both buttons disabled opacity-60
  */
 
@@ -57,19 +58,23 @@ function getButtonClass(
   }
 
   if (choice === localAnswer) {
-    // Selected / locked — gold treatment (D-05)
+    // Selected — gold treatment (D-05)
+    // Re-tappable during "question"; immutable once host locks
     return cn(
       baseLayout,
       "glass-gold",
       "border-2 border-gold",
       "text-gold-bright",
       "shadow-[0_0_12px_0_rgba(212,168,67,0.4)]",
-      "cursor-not-allowed"
+      phase === "locked" ? "cursor-not-allowed" : "cursor-pointer"
     );
   }
 
-  // Unselected — fades out (D-05)
-  return cn(baseLayout, "glass opacity-40 pointer-events-none");
+  // Unselected — locked out after host locks; dimmed-but-tappable during "question" (change answer)
+  if (phase === "locked") {
+    return cn(baseLayout, "glass opacity-40 pointer-events-none");
+  }
+  return cn(baseLayout, "glass opacity-50 cursor-pointer");
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -80,17 +85,18 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
   const shouldReduce = useReducedMotion();
 
   // PLAY-03: seed from authoritative state on reconnect/refresh (Pitfall 6)
-  // When state.myAnswer arrives after a reconnect, replicate it into local lock.
+  // Only when localAnswer is null — avoids overwriting an in-flight optimistic change
+  // with stale server state before the upsert confirms.
   useEffect(() => {
-    if (state.myAnswer) {
+    if (state.myAnswer && localAnswer === null) {
       setLocalAnswer(state.myAnswer);
     }
-  }, [state.myAnswer]);
+  }, [state.myAnswer, localAnswer]);
 
-  // Handle A or B tap — optimistic lock + fire-and-forget POST
+  // Handle A or B tap — optimistic update + fire-and-forget POST (upsert on server)
   async function handleTap(choice: Choice) {
-    // PLAY-02: second tap after lock is a no-op
-    if (localAnswer !== null) return;
+    // Only block after host locks — guests can change their answer during "question" phase
+    if (state.phase === "locked") return;
 
     // Optimistic lock — immediate UI update
     setLocalAnswer(choice);
@@ -106,7 +112,6 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
           choice,
         }),
       });
-      // 409 already_answered → server agrees with optimistic lock (fine)
       // 403 answers_locked → host locked mid-race; next broadcast re-fetch corrects
     } catch {
       // Network error — keep optimistic lock; next reconnect re-fetches real state
@@ -114,7 +119,7 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
   }
 
   const q = state.currentQuestion;
-  const isLocked = localAnswer !== null || state.phase === "locked";
+  const isLocked = state.phase === "locked";
 
   return (
     <main className="relative min-h-dvh bg-ink flex flex-col gap-6 px-4 pt-12 pb-[env(safe-area-inset-bottom)]">
