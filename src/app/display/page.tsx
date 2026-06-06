@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useGameSync } from "@/hooks/useGameSync";
 import { GAME_ID, HOST_SENTINEL_PLAYER_ID } from "@/lib/host/constants";
 import { LoadingDisplay } from "@/components/display/LoadingDisplay";
@@ -40,6 +41,7 @@ export default function DisplayPage() {
     GAME_ID,
     HOST_SENTINEL_PLAYER_ID
   );
+  const shouldReduce = useReducedMotion();
 
   // Fullscreen change listener — syncs isFullscreen with the browser state.
   // Handles Esc key exit and programmatic exits without relying on our own state.
@@ -106,8 +108,24 @@ export default function DisplayPage() {
         </button>
       )}
 
-      {/* Phase screen */}
-      {screen}
+      {/* Phase screen — AnimatePresence slide+fade between phases (D-02) */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={state?.phase ?? "loading"}
+          variants={{
+            hidden:  { opacity: 0, y: "2vh" },
+            visible: { opacity: 1, y: 0 },
+            exit:    { opacity: 0, y: "-1vh" },
+          }}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          transition={{ duration: shouldReduce ? 0 : 0.35, ease: "easeInOut" }}
+          className="w-full h-full"
+        >
+          {screen}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
