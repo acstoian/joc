@@ -223,8 +223,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on 07-01)*
 
-  - [ ] 07-02-PLAN.md — TV display polish: gradient titles + staggered leaderboards (RevealDisplay/WinnerDisplay) + TV winner confetti (D-03, D-06, D-09; RT-07)
-  - [ ] 07-03-PLAN.md — Guest polish: A/B whileTap feedback + NameGate gradient + correct-answer confetti (D-04, D-06, D-08; RT-07)
+  - [x] 07-02-PLAN.md — TV display polish: gradient titles + staggered leaderboards (RevealDisplay/WinnerDisplay) + TV winner confetti (D-03, D-06, D-09; RT-07)
+  - [x] 07-03-PLAN.md — Guest polish: A/B whileTap feedback + NameGate gradient + correct-answer confetti (D-04, D-06, D-08; RT-07)
 
 **Wave 3** *(blocked on 07-01, 07-02, 07-03)*
 
@@ -245,4 +245,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Host Dashboard | 6/6 | Complete    | 2026-06-04 |
 | 5. Guest App | 3/3 | Complete   | 2026-06-04 |
 | 6. TV Display Mode | 3/3 | Complete    | 2026-06-05 |
-| 7. Polish & Pre-Event Hardening | 1/4 | In Progress|  |
+| 7. Polish & Pre-Event Hardening | 3/4 | In Progress|  |
