@@ -49,7 +49,7 @@ export function WinnerDisplay({ state }: { state: GameStateSnapshot }) {
   // 150 particles from upper-center (y: 0.3) fall down across the landscape projector.
   // Dynamic import keeps canvas-confetti off the initial bundle (Pitfall 4).
   useEffect(() => {
-    if (shouldReduce) return;
+    if (shouldReduce !== false) return;
     if (confettiFired.current) return;
     confettiFired.current = true;
     import("canvas-confetti").then(({ default: confetti }) => {
@@ -113,7 +113,7 @@ export function WinnerDisplay({ state }: { state: GameStateSnapshot }) {
                   const rank = index + 1;
                   const isLast = index === state.leaderboard.length - 1;
                   return (
-                    <li key={`${entry.name}-${rank}`}>
+                    <li key={`${entry.name}-${entry.score}-${index}`}>
                       <div className="flex items-center gap-3 py-3 px-2">
                         <span className="text-sm text-champagne-dim w-6 text-right shrink-0">#{rank}</span>
                         <span className={`flex-1 text-base truncate ${getRankClasses(rank)}`}>{entry.name}</span>
@@ -136,7 +136,7 @@ export function WinnerDisplay({ state }: { state: GameStateSnapshot }) {
                   const rank = index + 1;
                   const isLast = index === state.leaderboard.length - 1;
                   return (
-                    <motion.li key={`${entry.name}-${rank}`} variants={rowVariants}>
+                    <motion.li key={`${entry.name}-${entry.score}-${index}`} variants={rowVariants}>
                       <div className="flex items-center gap-3 py-3 px-2">
                         <span className="text-sm text-champagne-dim w-6 text-right shrink-0">#{rank}</span>
                         <span className={`flex-1 text-base truncate ${getRankClasses(rank)}`}>{entry.name}</span>

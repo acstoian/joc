@@ -84,7 +84,7 @@ export function RevealScreen({ state, status }: RevealScreenProps) {
     const answeredCorrectly =
       state.myAnswer !== null && state.myAnswer === state.correctOption;
     if (!answeredCorrectly) return;
-    if (shouldReduce) return;
+    if (shouldReduce !== false) return;
     if (confettiFired.current) return;
     confettiFired.current = true;
     import("canvas-confetti").then(({ default: confetti }) => {
@@ -95,7 +95,7 @@ export function RevealScreen({ state, status }: RevealScreenProps) {
         colors: ["#f0c060", "#f5e6c8", "#d4a843"],
       });
     });
-  }, []); // empty deps — fires once on mount; state captured via closure
+  }, [state.myAnswer, state.correctOption, shouldReduce]);
 
   const q = state.currentQuestion;
 

@@ -69,10 +69,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Gold gradient text accent — hero headings only (D-06/D-07) ── */
 .text-gradient-gold {
+  color: var(--color-gold); /* fallback: browsers without background-clip: text show solid gold */
   background: linear-gradient(135deg, var(--color-gold), var(--color-champagne));
   background-clip: text;
   -webkit-background-clip: text;
-  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
 /* ── Thin rule ── */
@@ -103,5 +104,6 @@ h1, h2, h3, h4, h5, h6 {
   .text-gradient-gold {
     background: none;
     color: var(--color-gold);
+    -webkit-text-fill-color: var(--color-gold);
   }
 }

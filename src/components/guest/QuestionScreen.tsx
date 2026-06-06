@@ -54,7 +54,7 @@ function getButtonClass(
 
   if (localAnswer === null) {
     // Idle — both buttons live and tappable
-    return cn(baseLayout, "glass cursor-pointer active:scale-[0.97]");
+    return cn(baseLayout, "glass cursor-pointer");
   }
 
   if (choice === localAnswer) {
@@ -74,7 +74,7 @@ function getButtonClass(
   if (phase === "locked") {
     return cn(baseLayout, "glass opacity-40 pointer-events-none");
   }
-  return cn(baseLayout, "glass cursor-pointer active:scale-[0.97]");
+  return cn(baseLayout, "glass cursor-pointer");
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

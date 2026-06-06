@@ -116,7 +116,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Capture the question_id this upsert is bound to so WR-01 can confirm the
   // round did not advance underneath us.
-  const answeredQuestionId = game.current_question_id!;
+  const answeredQuestionId = game.current_question_id;
+  if (!answeredQuestionId) {
+    return NextResponse.json({ error: "no_active_question" }, { status: 409 });
+  };
 
   // ── Pre-upsert snapshot (WR-01 insert-vs-update distinction) ─────────────
   // Read the existing answer BEFORE the upsert so WR-01 can distinguish a new
