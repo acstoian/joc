@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { GAME_ID } from "@/lib/host/constants";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
@@ -76,6 +77,7 @@ function getButtonClass(
 export function QuestionScreen({ state, identity, status }: QuestionScreenProps) {
   // Optimistic lock state — null until guest taps (or state.myAnswer arrives)
   const [localAnswer, setLocalAnswer] = useState<Choice | null>(null);
+  const shouldReduce = useReducedMotion();
 
   // PLAY-03: seed from authoritative state on reconnect/refresh (Pitfall 6)
   // When state.myAnswer arrives after a reconnect, replicate it into local lock.
@@ -133,10 +135,12 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
         {/* A/B buttons — full-width stacked, gap-4 between them (D-04) */}
         <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
           {/* Button A */}
-          <button
+          <motion.button
             type="button"
             className={getButtonClass("A", localAnswer, state.phase)}
             onClick={() => handleTap("A")}
+            whileTap={shouldReduce ? undefined : { scale: 0.96 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
             aria-pressed={localAnswer === "A"}
             aria-disabled={isLocked && localAnswer !== "A"}
             aria-label={`Opțiunea A: ${q?.optionA ?? "A"}`}
@@ -152,13 +156,15 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
             >
               {q?.optionA ?? "A"}
             </span>
-          </button>
+          </motion.button>
 
           {/* Button B */}
-          <button
+          <motion.button
             type="button"
             className={getButtonClass("B", localAnswer, state.phase)}
             onClick={() => handleTap("B")}
+            whileTap={shouldReduce ? undefined : { scale: 0.96 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
             aria-pressed={localAnswer === "B"}
             aria-disabled={isLocked && localAnswer !== "B"}
             aria-label={`Opțiunea B: ${q?.optionB ?? "B"}`}
@@ -174,7 +180,7 @@ export function QuestionScreen({ state, identity, status }: QuestionScreenProps)
             >
               {q?.optionB ?? "B"}
             </span>
-          </button>
+          </motion.button>
         </div>
 
         {/* Waiting state — shown after lock (PLAY-04) */}
