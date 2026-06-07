@@ -170,7 +170,7 @@ export function EmergencyPanel({ gameId, password, questions }: EmergencyPanelPr
                   Reseteaza Runda
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="glass border-red-500/20">
+              <AlertDialogContent className="border-red-500/30">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="font-heading text-champagne">
                     Resetezi runda curenta?
@@ -237,7 +237,7 @@ export function EmergencyPanel({ gameId, password, questions }: EmergencyPanelPr
                 Incheie Fortat Jocul
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="glass border-red-500/20">
+            <AlertDialogContent className="border-red-500/30">
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-heading text-champagne">
                   Inchei jocul fortat?
@@ -272,7 +272,7 @@ export function EmergencyPanel({ gameId, password, questions }: EmergencyPanelPr
                 Joc Nou / Reseteaza Jocul
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="glass border-red-500/20">
+            <AlertDialogContent className="border-red-500/30">
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-heading text-champagne">
                   Resetezi tot jocul?
