@@ -21,11 +21,11 @@ interface NameWithBarProps {
   option: "A" | "B";
   name: string;
   pct: number;
-  correctOption: "A" | "B" | null;
+  correctOption: "A" | "B" | "AB" | null;
 }
 
 function NameWithBar({ option, name, pct, correctOption }: NameWithBarProps) {
-  const isCorrect = option === correctOption;
+  const isCorrect = correctOption === "AB" || option === correctOption;
   const isDimmed = correctOption !== null && !isCorrect;
 
   return (

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "gameId required" }, { status: 400 });
   }
 
-  if (choice !== "A" && choice !== "B") {
+  if (choice !== "A" && choice !== "B" && choice !== "AB") {
     return NextResponse.json({ error: "choice required" }, { status: 400 });
   }
 

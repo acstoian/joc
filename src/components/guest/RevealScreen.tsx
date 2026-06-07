@@ -43,7 +43,7 @@ const NAMES: Record<Choice, string> = { A: "Andrei", B: "Cristina" };
 // ── Card class derivation for revealed phase ──────────────────────────────────
 
 function getRevealClass(option: Choice, state: GameStateSnapshot): string {
-  const isCorrect = state.correctOption === option;
+  const isCorrect = state.correctOption === "AB" || state.correctOption === option;
   const isMyAnswer = state.myAnswer === option;
 
   const base =
@@ -80,7 +80,8 @@ export function RevealScreen({ state, status }: RevealScreenProps) {
   // Correct-answer mini confetti burst — fires once on mount (D-08).
   useEffect(() => {
     const answeredCorrectly =
-      state.myAnswer !== null && state.myAnswer === state.correctOption;
+      state.myAnswer !== null &&
+      (state.correctOption === "AB" || state.myAnswer === state.correctOption);
     if (!answeredCorrectly) return;
     if (shouldReduce !== false) return;
     if (confettiFired.current) return;
@@ -107,7 +108,7 @@ export function RevealScreen({ state, status }: RevealScreenProps) {
   // Helper: render one reveal card (Andrei or Cristina)
   function RevealCard({ option }: { option: Choice }) {
     const name = NAMES[option];
-    const isCorrect = state.correctOption === option;
+    const isCorrect = state.correctOption === "AB" || state.correctOption === option;
     const isMyAnswer = state.myAnswer === option;
     const isWrong = isMyAnswer && !isCorrect;
 
@@ -181,7 +182,7 @@ export function RevealScreen({ state, status }: RevealScreenProps) {
           <div className="flex flex-col gap-3 w-full max-w-md mx-auto">
             {(["A", "B"] as Choice[]).map((opt) => {
               const pct = opt === "A" ? pctA : pctB;
-              const isCorrect = state.correctOption === opt;
+              const isCorrect = state.correctOption === "AB" || state.correctOption === opt;
               return (
                 <div key={opt} className="flex flex-col gap-1.5">
                   <div className="flex justify-between items-center text-xs">

@@ -116,8 +116,8 @@ export function ControlTab({
   // Single in-flight action guard (SC4 — blocks double-tap)
   const [inFlight, setInFlight] = useState<string | null>(null);
 
-  // Correct-option pick for the reveal action (the host picks A or B live)
-  const [revealChoice, setRevealChoice] = useState<"A" | "B">("A");
+  // Correct-option pick for the reveal action (the host picks A, B, or AB live)
+  const [revealChoice, setRevealChoice] = useState<"A" | "B" | "AB">("A");
 
   // Ordered question list — needed to resolve nextQuestionId for the "next" action
   const [questions, setQuestions] = useState<HostQuestion[]>([]);
@@ -281,20 +281,21 @@ export function ControlTab({
             Alege raspunsul corect:
           </p>
           <div className="flex gap-3">
-            {(["A", "B"] as const).map((opt) => {
-              const label = opt === "A" ? "Andrei" : "Cristina";
+            {(["A", "B", "AB"] as const).map((opt) => {
+              const label = opt === "A" ? "Andrei" : opt === "B" ? "Cristina" : "Ambii";
+              const isSelected = revealChoice === opt;
               return (
                 <button
                   key={opt}
                   type="button"
                   onClick={() => setRevealChoice(opt)}
                   disabled={anyInFlight}
-                  aria-pressed={revealChoice === opt}
+                  aria-pressed={isSelected}
                   className={[
-                    "min-h-[44px] flex-1 rounded-lg px-4 py-2",
+                    "min-h-[44px] flex-1 rounded-lg px-3 py-2",
                     "text-sm font-bold transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
-                    revealChoice === opt
+                    isSelected
                       ? "bg-gold text-ink"
                       : "bg-gold/20 text-gold-bright hover:bg-gold/30",
                     anyInFlight ? "opacity-40 cursor-not-allowed" : "cursor-pointer",

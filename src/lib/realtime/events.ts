@@ -15,7 +15,7 @@ export type GameEvent =
   | { type: "GAME_STARTED";      gameId: string }
   | { type: "QUESTION_STARTED";  gameId: string; questionId: string }
   | { type: "ANSWERS_LOCKED";    gameId: string; questionId: string }
-  | { type: "ANSWER_REVEALED";   gameId: string; questionId: string; correctOption: "A" | "B" }
+  | { type: "ANSWER_REVEALED";   gameId: string; questionId: string; correctOption: "A" | "B" | "AB" }
   | { type: "SCORES_UPDATED";    gameId: string }
   | { type: "ROUND_RESET";       gameId: string; questionId: string }
   | { type: "GAME_ENDED";        gameId: string }

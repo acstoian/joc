@@ -60,7 +60,7 @@ export type GameStateSnapshot = {
     optionB: string;
   } | null;
   myAnswer: "A" | "B" | null;
-  correctOption: "A" | "B" | null;                    // populated when phase === 'revealed'
+  correctOption: "A" | "B" | "AB" | null;             // populated when phase === 'revealed'; 'AB' = both correct
   distribution: { A: number; B: number } | null;      // populated when locked/revealed
   leaderboard: { name: string; score: number }[];     // populated when phase !== 'lobby'
 };
