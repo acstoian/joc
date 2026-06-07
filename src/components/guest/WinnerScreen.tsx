@@ -1,20 +1,29 @@
 "use client";
 
 /**
- * WinnerScreen — game-end screen (phase = "ended", D-09, PLAY-07).
+ * WinnerScreen — end-game screen on the guest phone (phase = "ended").
  *
- * #1 winner in a glass-gold card (Trophy + name + score).
- * #2 and #3 as compact ranked rows below — no full scrolling leaderboard.
- * One-shot canvas-confetti burst on mount (Pitfall 7 — ref-guarded, dynamic import).
+ * Fun recap of the top-3 players — no winner declaration. All content
+ * fits within h-dvh (no scroll). One-shot confetti on mount.
  */
 
 import { useEffect, useRef } from "react";
-import { Trophy, Medal } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
 import { SyncStatusBadge } from "@/components/guest/SyncStatusBadge";
-import { Card, CardContent } from "@/components/ui/card";
+
+const RANK_COLORS = [
+  "text-gold-bright",   // #1
+  "text-champagne",     // #2
+  "text-champagne-dim", // #3
+];
+
+const RANK_BORDER = [
+  "border-gold/30",
+  "border-champagne/20",
+  "border-champagne/10",
+];
 
 export function WinnerScreen({
   state,
@@ -39,93 +48,61 @@ export function WinnerScreen({
   }, []);
 
   const top3 = state.leaderboard.slice(0, 3);
-  const winner = top3[0] ?? null;
-  const runners = top3.slice(1); // #2 and #3
 
   return (
+    /* h-dvh — hard lock so nothing spills below the fold */
     <motion.main
-      className="relative min-h-dvh bg-ink flex flex-col items-center px-4 pt-12 pb-[env(safe-area-inset-bottom)]"
-      aria-label="Ecranul câștigătorului"
+      className="relative h-dvh bg-ink flex flex-col items-center justify-center gap-5 px-4 pb-[env(safe-area-inset-bottom)]"
+      aria-label="Joc terminat"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <SyncStatusBadge status={status} />
 
-      <h1 className="font-heading text-3xl font-bold text-gradient-gold text-center">
-        Câștigător!
+      <h1 className="font-heading text-3xl font-bold text-champagne text-center">
+        Mulțumim tuturor!
       </h1>
 
-      <div className="thin-divider my-0 mt-5" aria-hidden="true" />
+      <div className="thin-divider w-full max-w-xs" aria-hidden="true" />
 
-      {/* #1 featured card */}
-      <motion.div
-        className="w-full max-w-sm mt-6"
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.15, duration: 0.35, ease: "easeOut" }}
-      >
-        {winner !== null ? (
-          <Card className="glass-gold w-full border-0 py-0 shadow-[0_0_40px_0_rgba(212,168,67,0.2)]">
-            <CardContent className="flex flex-col items-center gap-3 p-8">
-              <Trophy size={64} className="text-gold-bright" aria-hidden="true" />
-              <p className="text-3xl font-bold font-heading text-gold-bright text-center leading-tight">
-                {winner.name}
-              </p>
-              <p className="text-sm text-champagne-dim">
-                {winner.score}{" "}
-                {winner.score === 1 ? "răspuns corect" : "răspunsuri corecte"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="glass-gold w-full border-0 py-0">
-            <CardContent className="flex flex-col items-center gap-3 p-8">
-              <Trophy size={64} className="text-gold-bright" aria-hidden="true" />
-              <p className="text-2xl font-bold font-heading text-champagne text-center">
-                Felicitări tuturor!
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </motion.div>
-
-      {/* #2 and #3 — compact rows */}
-      {runners.length > 0 && (
+      {/* Top-3 rows — equal visual weight */}
+      {top3.length > 0 ? (
         <motion.div
-          className="w-full max-w-sm mt-4 flex flex-col gap-2"
+          className="w-full max-w-sm flex flex-col gap-3"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.3, ease: "easeOut" }}
+          transition={{ delay: 0.15, duration: 0.35, ease: "easeOut" }}
         >
-          {runners.map((entry, i) => {
-            const rank = i + 2;
-            return (
-              <div
-                key={`${entry.name}-${entry.score}-${rank}`}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl glass",
-                  rank === 2 ? "border border-champagne/20" : "border border-champagne/10"
-                )}
-              >
-                <Medal
-                  className={cn(
-                    "size-4 shrink-0",
-                    rank === 2 ? "text-champagne" : "text-champagne-dim/60"
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="flex-1 text-sm font-medium text-champagne truncate">
-                  {entry.name}
-                </span>
-                <span className="text-xs text-gold tabular-nums shrink-0">
-                  {entry.score} pt
-                </span>
-              </div>
-            );
-          })}
+          {top3.map((entry, i) => (
+            <div
+              key={`${entry.name}-${entry.score}-${i}`}
+              className={cn(
+                "glass rounded-xl flex items-center gap-3 px-4 py-3 border",
+                RANK_BORDER[i]
+              )}
+            >
+              <span className={cn("text-sm font-bold tabular-nums w-6 text-right shrink-0", RANK_COLORS[i])}>
+                #{i + 1}
+              </span>
+              <span className="flex-1 text-base font-semibold font-heading text-champagne truncate">
+                {entry.name}
+              </span>
+              <span className="text-sm text-gold tabular-nums shrink-0">
+                {entry.score} pt
+              </span>
+            </div>
+          ))}
         </motion.div>
+      ) : (
+        <p className="text-sm text-champagne-dim/60">Nu există jucători înregistrați.</p>
       )}
+
+      <div className="thin-divider w-full max-w-xs" aria-hidden="true" />
+
+      <p className="text-sm text-champagne-dim/50 text-center">
+        Cristina &amp; Andrei · 26.09.2026
+      </p>
     </motion.main>
   );
 }
