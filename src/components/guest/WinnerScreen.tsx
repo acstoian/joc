@@ -3,23 +3,17 @@
 /**
  * WinnerScreen — game-end screen (phase = "ended", D-09, PLAY-07).
  *
- * Features:
- *   - #1 player featured prominently in a glass-gold Card (D-09)
- *   - Full final leaderboard via LeaderboardPanel (PLAY-06)
- *   - One-shot canvas-confetti burst on mount (Pitfall 7 — ref-guarded, dynamic import)
- *
- * Receives state + status as props from GameView — does NOT call useGameSync (Pitfall 3).
- *
- * Security: display names rendered as React text nodes (no dangerouslySetInnerHTML — T-05-08).
- * Performance: canvas-confetti is dynamically imported, never static-imported (T-05-07, Performance Contract).
+ * #1 winner in a glass-gold card (Trophy + name + score).
+ * #2 and #3 as compact ranked rows below — no full scrolling leaderboard.
+ * One-shot canvas-confetti burst on mount (Pitfall 7 — ref-guarded, dynamic import).
  */
 
 import { useEffect, useRef } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Medal } from "lucide-react";
 import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
 import { SyncStatusBadge } from "@/components/guest/SyncStatusBadge";
-import { LeaderboardPanel } from "@/components/guest/LeaderboardPanel";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function WinnerScreen({
@@ -31,11 +25,6 @@ export function WinnerScreen({
 }) {
   const confettiFired = useRef(false);
 
-  // Fire confetti exactly once on mount (Pitfall 7 — useRef guard prevents re-fire).
-  // Dynamic import keeps canvas-confetti out of the main bundle until the ended phase
-  // (Performance Contract — must NOT be a static top-level import).
-  // WinnerScreen only mounts when state.phase === "ended" (D-07 single-mount guarantee),
-  // so empty-deps effect runs exactly once per game-end transition.
   useEffect(() => {
     if (confettiFired.current) return;
     confettiFired.current = true;
@@ -49,7 +38,9 @@ export function WinnerScreen({
     });
   }, []);
 
-  const winner = state.leaderboard[0] ?? null;
+  const top3 = state.leaderboard.slice(0, 3);
+  const winner = top3[0] ?? null;
+  const runners = top3.slice(1); // #2 and #3
 
   return (
     <motion.main
@@ -59,17 +50,15 @@ export function WinnerScreen({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
-      {/* Absolute-positioned badge — does not participate in flex column flow */}
       <SyncStatusBadge status={status} />
 
-      {/* Heading */}
       <h1 className="font-heading text-3xl font-bold text-gradient-gold text-center">
         Câștigător!
       </h1>
 
       <div className="thin-divider my-0 mt-5" aria-hidden="true" />
 
-      {/* #1 featured card — staggered entrance, glass-gold treatment (D-09) */}
+      {/* #1 featured card */}
       <motion.div
         className="w-full max-w-sm mt-6"
         initial={{ opacity: 0, scale: 0.92 }}
@@ -79,12 +68,7 @@ export function WinnerScreen({
         {winner !== null ? (
           <Card className="glass-gold w-full border-0 py-0 shadow-[0_0_40px_0_rgba(212,168,67,0.2)]">
             <CardContent className="flex flex-col items-center gap-3 p-8">
-              <Trophy
-                size={64}
-                className="text-gold-bright"
-                aria-hidden="true"
-              />
-              {/* Winner name — gold-bright, Playfair Display, prominent (D-09) */}
+              <Trophy size={64} className="text-gold-bright" aria-hidden="true" />
               <p className="text-3xl font-bold font-heading text-gold-bright text-center leading-tight">
                 {winner.name}
               </p>
@@ -95,7 +79,6 @@ export function WinnerScreen({
             </CardContent>
           </Card>
         ) : (
-          /* Graceful fallback — no leaderboard data */
           <Card className="glass-gold w-full border-0 py-0">
             <CardContent className="flex flex-col items-center gap-3 p-8">
               <Trophy size={64} className="text-gold-bright" aria-hidden="true" />
@@ -107,10 +90,42 @@ export function WinnerScreen({
         )}
       </motion.div>
 
-      <div className="thin-divider my-0 mt-6" aria-hidden="true" />
-
-      {/* Full final leaderboard — PLAY-06, D-09 */}
-      <LeaderboardPanel leaderboard={state.leaderboard} />
+      {/* #2 and #3 — compact rows */}
+      {runners.length > 0 && (
+        <motion.div
+          className="w-full max-w-sm mt-4 flex flex-col gap-2"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.3, ease: "easeOut" }}
+        >
+          {runners.map((entry, i) => {
+            const rank = i + 2;
+            return (
+              <div
+                key={`${entry.name}-${entry.score}-${rank}`}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl glass",
+                  rank === 2 ? "border border-champagne/20" : "border border-champagne/10"
+                )}
+              >
+                <Medal
+                  className={cn(
+                    "size-4 shrink-0",
+                    rank === 2 ? "text-champagne" : "text-champagne-dim/60"
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="flex-1 text-sm font-medium text-champagne truncate">
+                  {entry.name}
+                </span>
+                <span className="text-xs text-gold tabular-nums shrink-0">
+                  {entry.score} pt
+                </span>
+              </div>
+            );
+          })}
+        </motion.div>
+      )}
     </motion.main>
   );
 }

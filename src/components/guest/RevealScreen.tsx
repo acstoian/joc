@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle } from "lucide-react";
 import type { GameStateSnapshot, SyncStatus } from "@/hooks/useGameSync";
 import { SyncStatusBadge } from "@/components/guest/SyncStatusBadge";
-import { LeaderboardPanel } from "@/components/guest/LeaderboardPanel";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -210,8 +209,6 @@ export function RevealScreen({ state, status }: RevealScreenProps) {
         )}
       </div>
 
-      {/* Leaderboard — self-hides when empty (D-08) */}
-      <LeaderboardPanel leaderboard={state.leaderboard} />
     </motion.main>
   );
 }
