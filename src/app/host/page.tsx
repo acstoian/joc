@@ -198,43 +198,41 @@ function DashboardShell({ password }: { password: string }) {
           </Badge>
         </header>
 
-        {/* Tabbed dashboard body — fills remaining viewport height */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Tabs defaultValue="control" className="flex flex-1 flex-col">
-            {/* Sticky tab list — stays below the header on scroll */}
-            <TabsList className="sticky top-12 z-10 grid w-full grid-cols-3 rounded-none border-b border-champagne/10 bg-ink px-2 py-1">
-              <TabsTrigger
-                value="control"
-                className="min-h-[44px] rounded-lg text-xs font-semibold text-champagne-dim data-[state=active]:bg-gold/20 data-[state=active]:text-gold-bright"
-              >
-                Control
-              </TabsTrigger>
-              <TabsTrigger
-                value="intrebari"
-                className="min-h-[44px] rounded-lg text-xs font-semibold text-champagne-dim data-[state=active]:bg-gold/20 data-[state=active]:text-gold-bright"
-              >
-                Intrebari
-              </TabsTrigger>
-              <TabsTrigger
-                value="statistici"
-                className="min-h-[44px] rounded-lg text-xs font-semibold text-champagne-dim data-[state=active]:bg-gold/20 data-[state=active]:text-gold-bright"
-              >
-                Statistici
-              </TabsTrigger>
-            </TabsList>
+        {/* Tabbed dashboard body — page scrolls naturally; sticky works */}
+        <Tabs defaultValue="control" className="flex flex-1 flex-col">
+          {/* Tab list — sticky below the 48px header (top-12) */}
+          <TabsList className="sticky top-12 z-10 grid w-full grid-cols-3 rounded-none border-b border-champagne/10 bg-ink px-2 py-1">
+            <TabsTrigger
+              value="control"
+              className="min-h-[44px] rounded-lg text-xs font-semibold text-champagne-dim data-[state=active]:bg-gold/20 data-[state=active]:text-gold-bright"
+            >
+              Control
+            </TabsTrigger>
+            <TabsTrigger
+              value="intrebari"
+              className="min-h-[44px] rounded-lg text-xs font-semibold text-champagne-dim data-[state=active]:bg-gold/20 data-[state=active]:text-gold-bright"
+            >
+              Intrebari
+            </TabsTrigger>
+            <TabsTrigger
+              value="statistici"
+              className="min-h-[44px] rounded-lg text-xs font-semibold text-champagne-dim data-[state=active]:bg-gold/20 data-[state=active]:text-gold-bright"
+            >
+              Statistici
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Tab content panels */}
-            <TabsContent value="control" className="flex-1 p-4">
-              <ControlTab {...tabProps} />
-            </TabsContent>
-            <TabsContent value="intrebari" className="flex-1 p-4">
-              <QuestionsTab {...tabProps} />
-            </TabsContent>
-            <TabsContent value="statistici" className="flex-1 p-4">
-              <StatsTab {...tabProps} />
-            </TabsContent>
-          </Tabs>
-        </div>
+          {/* Tab content panels — scroll with the page body */}
+          <TabsContent value="control" className="p-4 pb-8">
+            <ControlTab {...tabProps} />
+          </TabsContent>
+          <TabsContent value="intrebari" className="p-4 pb-8">
+            <QuestionsTab {...tabProps} />
+          </TabsContent>
+          <TabsContent value="statistici" className="p-4 pb-8">
+            <StatsTab {...tabProps} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Sonner toaster — mounted once at the page root */}

@@ -274,36 +274,39 @@ export function ControlTab({
         </div>
       </div>
 
-      {/* ── Reveal A/B picker — visible only in locked phase ────────────────── */}
+      {/* ── Reveal picker — visible only in locked phase ───────────────────── */}
       {phase === "locked" && (
         <div className="glass rounded-2xl px-5 py-4 shadow-xl">
           <p className="mb-3 text-xs font-semibold text-champagne-dim/60">
             Alege raspunsul corect:
           </p>
           <div className="flex gap-3">
-            {(["A", "B"] as const).map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setRevealChoice(opt)}
-                disabled={anyInFlight}
-                aria-pressed={revealChoice === opt}
-                className={[
-                  "min-h-[44px] min-w-[44px] rounded-lg px-5 py-2",
-                  "text-sm font-bold transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
-                  revealChoice === opt
-                    ? "bg-gold text-ink"
-                    : "bg-gold/20 text-gold-bright hover:bg-gold/30",
-                  anyInFlight ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                style={{ touchAction: "manipulation" }}
-              >
-                {opt}
-              </button>
-            ))}
+            {(["A", "B"] as const).map((opt) => {
+              const label = opt === "A" ? "Andrei" : "Cristina";
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setRevealChoice(opt)}
+                  disabled={anyInFlight}
+                  aria-pressed={revealChoice === opt}
+                  className={[
+                    "min-h-[44px] flex-1 rounded-lg px-4 py-2",
+                    "text-sm font-bold transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                    revealChoice === opt
+                      ? "bg-gold text-ink"
+                      : "bg-gold/20 text-gold-bright hover:bg-gold/30",
+                    anyInFlight ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={{ touchAction: "manipulation" }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

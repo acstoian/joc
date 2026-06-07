@@ -1,12 +1,11 @@
 "use client";
 
 /**
- * DistributionBar — animated A/B answer distribution bar (HOST-09, UI-SPEC §9/§10).
+ * DistributionBar — animated Andrei/Cristina answer distribution bar (HOST-09).
  *
- * Props: a (count), b (count), optional height (px). Renders a rounded bar split
- * proportionally — gold A-portion left, blush B-portion right — with the A width
- * animated via motion/react (0.4s easeOut). Accessible as role="meter" with
- * aria-valuenow/min/max = total answers (UI-SPEC §10). Count labels "A: X" / "B: Y".
+ * Renders a rounded bar split proportionally — gold Andrei-portion left,
+ * blush Cristina-portion right — with the Andrei width animated via motion/react.
+ * Labels show "Andrei: X" / "Cristina: Y" to match the player-facing buttons.
  */
 
 import { motion } from "motion/react";
@@ -25,7 +24,7 @@ export function DistributionBar({ a, b, height = 8 }: DistributionBarProps) {
     <div className="flex flex-col gap-1.5">
       <div
         role="meter"
-        aria-label="Distributie raspunsuri A/B"
+        aria-label="Distributie raspunsuri Andrei/Cristina"
         aria-valuenow={total}
         aria-valuemin={0}
         aria-valuemax={total}
@@ -44,8 +43,8 @@ export function DistributionBar({ a, b, height = 8 }: DistributionBarProps) {
         />
       </div>
       <div className="flex justify-between text-xs">
-        <span className="font-medium text-gold-bright">A: {a}</span>
-        <span className="font-medium text-blush">B: {b}</span>
+        <span className="font-medium text-gold-bright">Andrei: {a}</span>
+        <span className="font-medium text-blush">Cristina: {b}</span>
       </div>
     </div>
   );
