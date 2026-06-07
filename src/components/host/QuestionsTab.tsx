@@ -31,8 +31,8 @@ function makeDraft(): HostQuestion {
   return {
     id: DRAFT_ID,
     body: "",
-    option_a: "",
-    option_b: "",
+    option_a: "Andrei",
+    option_b: "Cristina",
     correct_option: null,
     display_order: Number.MAX_SAFE_INTEGER,
     created_at: "",

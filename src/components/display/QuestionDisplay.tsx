@@ -3,7 +3,8 @@
 /**
  * QuestionDisplay — question phase screen for the TV display surface (D-02, DISP-03).
  *
- * Full-screen centered layout with a slide-up question text + two A/B option cards.
+ * Full-screen centered layout with a slide-up question text + two identity cards.
+ * All questions are Andrei vs Cristina — the names are the answer options.
  * NO percentage bars — suspense is maintained while voting is open.
  *
  * Critical corrections applied:
@@ -20,33 +21,21 @@ import type { GameStateSnapshot } from "@/hooks/useGameSync";
 
 // ── Internal helper ────────────────────────────────────────────────────────────
 
-interface OptionCardProps {
-  option: "A" | "B";
-  text: string;
+interface NameCardProps {
+  name: string;
 }
 
-function OptionCard({ option, text }: OptionCardProps) {
+function NameCard({ name }: NameCardProps) {
   return (
     <div
       className={cn(
         "glass rounded-2xl",
-        "flex flex-col items-center justify-center gap-[1.5vh]",
+        "flex items-center justify-center",
         "px-[4vw] py-[3vh] min-h-[18vh]"
       )}
     >
-      {/* Letter prefix label */}
-      <span
-        className={cn(
-          "text-[1.5vw] font-normal font-body",
-          "text-champagne-dim/70 uppercase tracking-[0.3em]"
-        )}
-      >
-        {option}
-      </span>
-
-      {/* Option text */}
-      <span className="text-[2vw] font-normal font-body text-champagne text-center">
-        {text}
+      <span className="text-[4vw] font-bold font-heading text-champagne text-center">
+        {name}
       </span>
     </div>
   );
@@ -86,10 +75,10 @@ export function QuestionDisplay({ state }: { state: GameStateSnapshot }) {
         {q?.body ?? "Se încarcă întrebarea..."}
       </h2>
 
-      {/* A/B option cards — side by side, no bars */}
+      {/* Andrei / Cristina identity cards — side by side, no bars */}
       <div className="grid grid-cols-2 gap-[3vw] w-full max-w-[90vw]">
-        <OptionCard option="A" text={q?.optionA ?? "A"} />
-        <OptionCard option="B" text={q?.optionB ?? "B"} />
+        <NameCard name={q?.optionA ?? "Andrei"} />
+        <NameCard name={q?.optionB ?? "Cristina"} />
       </div>
     </div>
   );

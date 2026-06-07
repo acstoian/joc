@@ -3,8 +3,9 @@
 /**
  * LockedDisplay — locked phase screen for the TV display surface (D-03, DISP-04).
  *
- * Same question + options layout as QuestionDisplay, but with live A/B percentage
+ * Same question + identity cards layout as QuestionDisplay, but with live A/B percentage
  * bars that fill smoothly as votes arrive from useGameSync re-fetches.
+ * All questions are Andrei vs Cristina — the names replace A/B labels everywhere.
  *
  * Critical corrections applied:
  *   - Guards state.distribution against null: const dist = state.distribution ?? { A: 0, B: 0 }
@@ -18,36 +19,24 @@ import type { GameStateSnapshot } from "@/hooks/useGameSync";
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
-interface OptionWithBarProps {
-  option: "A" | "B";
-  text: string;
+interface NameWithBarProps {
+  name: string;
   pct: number;
 }
 
-function OptionWithBar({ option, text, pct }: OptionWithBarProps) {
+function NameWithBar({ name, pct }: NameWithBarProps) {
   return (
     <div className="flex flex-col gap-[1.5vh]">
-      {/* Option card — glass, no gold treatment yet */}
+      {/* Identity card — glass, no gold treatment yet */}
       <div
         className={cn(
           "glass rounded-2xl",
-          "flex flex-col items-center justify-center gap-[1.5vh]",
+          "flex items-center justify-center",
           "px-[4vw] py-[3vh] min-h-[18vh]"
         )}
       >
-        {/* Letter prefix */}
-        <span
-          className={cn(
-            "text-[1.5vw] font-normal font-body",
-            "text-champagne-dim/70 uppercase tracking-[0.3em]"
-          )}
-        >
-          {option}
-        </span>
-
-        {/* Option text */}
-        <span className="text-[2vw] font-normal font-body text-champagne text-center">
-          {text}
+        <span className="text-[4vw] font-bold font-heading text-champagne text-center">
+          {name}
         </span>
       </div>
 
@@ -65,7 +54,7 @@ function OptionWithBar({ option, text, pct }: OptionWithBarProps) {
         {/* Percentage label */}
         <span
           className={cn(
-            "text-[2vw] font-bold font-body text-champagne",
+            "text-[2vw] font-bold font-body text-champagne tabular-nums",
             "w-[5vw] text-right shrink-0"
           )}
         >
@@ -124,18 +113,10 @@ export function LockedDisplay({ state }: { state: GameStateSnapshot }) {
         Răspunsurile au fost blocate
       </p>
 
-      {/* A/B option cards with live-filling percentage bars */}
+      {/* Andrei / Cristina cards with live-filling percentage bars */}
       <div className="grid grid-cols-2 gap-[3vw] w-full max-w-[90vw]">
-        <OptionWithBar
-          option="A"
-          text={q?.optionA ?? "A"}
-          pct={pctA}
-        />
-        <OptionWithBar
-          option="B"
-          text={q?.optionB ?? "B"}
-          pct={pctB}
-        />
+        <NameWithBar name={q?.optionA ?? "Andrei"} pct={pctA} />
+        <NameWithBar name={q?.optionB ?? "Cristina"} pct={pctB} />
       </div>
     </div>
   );

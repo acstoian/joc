@@ -3,18 +3,23 @@
 /**
  * QuestionRow — one question rendered as a glass Card (Plan 04-03, D-03/D-03a).
  *
+ * All questions are always "Andrei vs Cristina". The correct-answer toggle shows
+ * "Andrei" / "Cristina" pills instead of generic A/B. The option text inputs are
+ * hidden — option_a and option_b are always "Andrei" / "Cristina" and are sent
+ * automatically on save. The host only needs to write the question body.
+ *
  * RowMode state machine: "view" | "editing" | "saving" | "error".
  *
  * View mode:
- *   - question number badge, body text, A/B option labels
- *   - correct-answer A/B toggle (two pills, selected = bg-gold text-ink font-bold,
- *     aria-pressed, min-h-[44px] min-w-[44px]) — marking calls onUpdate(correct_option)
- *   - ▲/▼ reorder buttons (lucide ChevronUp/ChevronDown, min 44px, disabled at ends)
- *   - delete button (Trash2, text-red-400) → AlertDialog with the UI-SPEC §7 copy
+ *   - question number badge, body text
+ *   - correct-answer "Andrei"/"Cristina" toggle (gold pill = selected)
+ *   - ▲/▼ reorder buttons (min 44px, disabled at ends)
+ *   - delete button (Trash2) → AlertDialog with Romanian copy
  *
  * Editing mode:
- *   - body/option_a/option_b become Inputs
+ *   - body becomes an Input
  *   - "Salveaza" (gold) + "Renunta" (ghost)
+ *   - option_a / option_b are always "Andrei" / "Cristina" — not shown as inputs
  *
  * Draft mode (isDraft): starts in editing; Save calls onCreate, Cancel calls onCancelDraft.
  * All copy is Romanian; only @theme tokens are used.
@@ -63,9 +68,10 @@ export interface QuestionRowProps {
   onMove: (index: number, direction: "up" | "down") => void;
 }
 
+// "Andrei" / "Cristina" pill — selected = bg-gold text-ink
 const correctPill = (selected: boolean) =>
   [
-    "min-h-[44px] min-w-[44px] rounded-md px-3 text-sm font-bold transition-colors",
+    "min-h-[44px] rounded-md px-4 text-sm font-bold transition-colors",
     selected
       ? "bg-gold text-ink"
       : "bg-ink-muted text-champagne-dim hover:bg-ink-muted/70",
@@ -85,8 +91,6 @@ export function QuestionRow({
 }: QuestionRowProps) {
   const [mode, setMode] = useState<RowMode>(isDraft ? "editing" : "view");
   const [body, setBody] = useState(question.body);
-  const [optionA, setOptionA] = useState(question.option_a);
-  const [optionB, setOptionB] = useState(question.option_b);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const isEditing = mode === "editing" || mode === "error";
@@ -94,21 +98,27 @@ export function QuestionRow({
 
   // ── Save (create for drafts, update for existing) ──────────────────────────
   async function handleSave() {
-    const trimmed = {
-      body: body.trim(),
-      option_a: optionA.trim(),
-      option_b: optionB.trim(),
-    };
-    if (!trimmed.body || !trimmed.option_a || !trimmed.option_b) {
+    const trimmedBody = body.trim();
+    if (!trimmedBody) {
       setMode("error");
-      setErrorMsg("Completeaza intrebarea si ambele variante.");
+      setErrorMsg("Completeaza textul intrebarii.");
       return;
     }
     setMode("saving");
     setErrorMsg(null);
+
+    // option_a / option_b are always "Andrei" / "Cristina"
+    const fields: QuestionFields = {
+      body: trimmedBody,
+      option_a: "Andrei",
+      option_b: "Cristina",
+      correct_option: question.correct_option as "A" | "B" | null,
+    };
+
     const result = isDraft
-      ? await onCreate?.({ ...trimmed, correct_option: question.correct_option as "A" | "B" | null })
-      : await onUpdate(question.id, trimmed);
+      ? await onCreate?.(fields)
+      : await onUpdate(question.id, { body: trimmedBody, option_a: "Andrei", option_b: "Cristina" });
+
     if (result) {
       setMode("view");
     } else {
@@ -123,15 +133,13 @@ export function QuestionRow({
       return;
     }
     setBody(question.body);
-    setOptionA(question.option_a);
-    setOptionB(question.option_b);
     setErrorMsg(null);
     setMode("view");
   }
 
-  // ── Mark correct option (A/B) ──────────────────────────────────────────────
+  // ── Mark correct option (Andrei = A, Cristina = B) ────────────────────────
   async function handleSetCorrect(option: "A" | "B") {
-    if (isDraft) return; // draft has no id yet; correct set on create via toggle below
+    if (isDraft) return;
     if (question.correct_option === option) return;
     await onUpdate(question.id, { correct_option: option });
   }
@@ -139,41 +147,21 @@ export function QuestionRow({
   return (
     <Card className="glass border-0 shadow-md">
       <CardContent className="flex flex-col gap-3 p-4">
-        {/* Header row: number badge + (view) body / reorder / delete */}
+        {/* Header row: number badge + body / controls */}
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-gold/20 px-1.5 text-xs font-bold text-gold-bright">
             {isDraft ? "+" : index + 1}
           </span>
 
           {isEditing ? (
-            <div className="flex flex-1 flex-col gap-2">
-              <Input
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Textul intrebarii"
-                aria-label="Textul intrebarii"
-                disabled={saving}
-                className="bg-ink-light text-champagne"
-              />
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  value={optionA}
-                  onChange={(e) => setOptionA(e.target.value)}
-                  placeholder="Varianta A"
-                  aria-label="Varianta A"
-                  disabled={saving}
-                  className="bg-ink-light text-champagne"
-                />
-                <Input
-                  value={optionB}
-                  onChange={(e) => setOptionB(e.target.value)}
-                  placeholder="Varianta B"
-                  aria-label="Varianta B"
-                  disabled={saving}
-                  className="bg-ink-light text-champagne"
-                />
-              </div>
-            </div>
+            <Input
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Textul intrebarii"
+              aria-label="Textul intrebarii"
+              disabled={saving}
+              className="flex-1 bg-ink-light text-champagne"
+            />
           ) : (
             <button
               type="button"
@@ -182,9 +170,6 @@ export function QuestionRow({
             >
               <span className="text-sm font-medium text-champagne">
                 {question.body}
-              </span>
-              <span className="text-xs text-champagne-dim/70">
-                A: {question.option_a} · B: {question.option_b}
               </span>
             </button>
           )}
@@ -228,7 +213,8 @@ export function QuestionRow({
                     <Trash2 className="size-4" />
                   </button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="glass border-champagne/10">
+                {/* bg-ink-light is set by AlertDialogContent default — no glass needed */}
+                <AlertDialogContent className="border-champagne/10">
                   <AlertDialogHeader>
                     <AlertDialogTitle className="font-heading text-champagne">
                       Stergi aceasta intrebare?
@@ -252,7 +238,7 @@ export function QuestionRow({
           )}
         </div>
 
-        {/* Correct-answer toggle + edit actions */}
+        {/* Correct-answer toggle (Andrei / Cristina) + edit actions */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-champagne-dim/70">Corect:</span>
@@ -263,7 +249,7 @@ export function QuestionRow({
               disabled={isDraft}
               className={correctPill(question.correct_option === "A")}
             >
-              A
+              Andrei
             </button>
             <button
               type="button"
@@ -272,7 +258,7 @@ export function QuestionRow({
               disabled={isDraft}
               className={correctPill(question.correct_option === "B")}
             >
-              B
+              Cristina
             </button>
           </div>
 

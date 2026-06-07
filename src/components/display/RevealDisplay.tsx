@@ -3,12 +3,12 @@
 /**
  * RevealDisplay — revealed phase screen for the TV display surface (D-04, D-05, DISP-05, DISP-06).
  *
- * Same question + options + bars layout as LockedDisplay, with reveal styling applied
- * via CONDITIONAL CLASSES IN JSX (no useEffect — Pitfall 5 avoidance):
- *   - Correct option card: glass-gold + border-gold-bright + gold glow + scale-[1.03]
- *   - Incorrect option wrapper: opacity-40
+ * Same question + identity cards + bars layout as LockedDisplay, with reveal styling applied:
+ *   - Correct identity card: glass-gold + border-gold-bright + gold glow + scale-[1.03]
+ *   - Incorrect identity wrapper: opacity-40
  *   - Correct bar fill: bg-gold-bright instead of bg-gold
  *
+ * All questions are Andrei vs Cristina — names replace A/B labels everywhere.
  * After the bars: .thin-divider + staggered top-5 leaderboard (inline motion.ol/li, D-03).
  * Reduced-motion: plain <ol>/<li> list with no stagger.
  *
@@ -18,7 +18,7 @@
  *   - Uses state.currentQuestion?.body (correction #1)
  *   - static "Întrebarea" label (correction #3)
  *   - LeaderboardPanel replaced by inline stagger (Plan 07-02)
- *   - No new files created — OptionWithBar defined locally within this file
+ *   - No new files created — NameWithBar defined locally within this file
  */
 
 import { motion, useReducedMotion } from "motion/react";
@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { GameStateSnapshot } from "@/hooks/useGameSync";
 
-// ── Local rank helpers (copied from LeaderboardPanel — do not import from there) ──
+// ── Local rank helpers ─────────────────────────────────────────────────────────
 
 function getRankClasses(rank: number): string {
   if (rank === 1) return "text-gold-bright font-bold";
@@ -51,16 +51,14 @@ const rowVariants = {
 
 // ── Internal helper ────────────────────────────────────────────────────────────
 
-interface OptionWithBarProps {
+interface NameWithBarProps {
   option: "A" | "B";
-  text: string;
+  name: string;
   pct: number;
   correctOption: "A" | "B" | null;
 }
 
-function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps) {
-  // Reveal state: correct = gold glow + scale; incorrect = dimmed
-  // Applied via JSX conditionals at render time — no useEffect needed (Pitfall 5)
+function NameWithBar({ option, name, pct, correctOption }: NameWithBarProps) {
   const isCorrect = option === correctOption;
   const isDimmed = correctOption !== null && !isCorrect;
 
@@ -71,11 +69,11 @@ function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps)
         isDimmed && "opacity-40 transition-opacity duration-300"
       )}
     >
-      {/* Option card — gold treatment on correct, plain glass on incorrect */}
+      {/* Identity card — gold treatment on correct, plain glass on incorrect */}
       <div
         className={cn(
           "rounded-2xl",
-          "flex flex-col items-center justify-center gap-[1.5vh]",
+          "flex items-center justify-center",
           "px-[4vw] py-[3vh] min-h-[18vh]",
           isCorrect
             ? [
@@ -87,21 +85,13 @@ function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps)
             : "glass"
         )}
       >
-        {/* Letter prefix */}
-        <span
-          className="text-[1.5vw] font-normal font-body text-champagne-dim/70 uppercase tracking-[0.3em]"
-        >
-          {option}
-        </span>
-
-        {/* Option text — gradient on correct */}
         <span
           className={cn(
-            "text-[2vw] font-normal font-body text-center",
+            "text-[4vw] font-bold font-heading text-center",
             isCorrect ? "text-gradient-gold" : "text-champagne"
           )}
         >
-          {text}
+          {name}
         </span>
       </div>
 
@@ -109,7 +99,6 @@ function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps)
       <div className="flex items-center gap-[1.5vw]">
         {/* Bar track */}
         <div className="flex-1 h-[1.5vh] rounded-full bg-ink-muted overflow-hidden">
-          {/* Bar fill — brighter on correct (bg-gold-bright), muted on incorrect (bg-gold) */}
           <div
             className={cn(
               "h-full rounded-full transition-[width] duration-500 ease-out",
@@ -122,7 +111,7 @@ function OptionWithBar({ option, text, pct, correctOption }: OptionWithBarProps)
         {/* Percentage label */}
         <span
           className={cn(
-            "text-[2vw] font-bold font-body text-champagne",
+            "text-[2vw] font-bold font-body text-champagne tabular-nums",
             "w-[5vw] text-right shrink-0"
           )}
         >
@@ -162,7 +151,7 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
         Întrebarea
       </p>
 
-      {/* Question text — no animation on reveal (the reveal effect is the story) */}
+      {/* Question text */}
       <h2
         className={cn(
           "text-[6vw] font-bold font-heading text-champagne",
@@ -172,17 +161,17 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
         {q?.body ?? "Se încarcă întrebarea..."}
       </h2>
 
-      {/* A/B option cards with reveal styling + bars */}
+      {/* Andrei / Cristina identity cards with reveal styling + bars */}
       <div className="grid grid-cols-2 gap-[3vw] w-full max-w-[90vw]">
-        <OptionWithBar
+        <NameWithBar
           option="A"
-          text={q?.optionA ?? "A"}
+          name={q?.optionA ?? "Andrei"}
           pct={pctA}
           correctOption={state.correctOption}
         />
-        <OptionWithBar
+        <NameWithBar
           option="B"
-          text={q?.optionB ?? "B"}
+          name={q?.optionB ?? "Cristina"}
           pct={pctB}
           correctOption={state.correctOption}
         />
@@ -191,8 +180,6 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
       {/* After-reveal top-5 leaderboard (DISP-06, D-05, D-03) — staggered */}
       <div className="w-full max-w-[55vw] mx-auto">
         <div className="thin-divider" />
-        {/* Scale wrapper: inline list uses mobile sizes; scale up for TV readability.
-            Container capped at 55vw so 1.5× output stays within ~83vw (overflow-hidden safe). */}
         <div className="transform scale-150 origin-top">
           {state.leaderboard.length > 0 && (
             <div className="flex flex-col gap-0 w-full max-w-md mx-auto mt-6">
@@ -209,7 +196,7 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
                         <div className="flex items-center gap-3 py-3 px-2">
                           <span className="text-sm text-champagne-dim w-6 text-right shrink-0">#{rank}</span>
                           <span className={`flex-1 text-base truncate ${getRankClasses(rank)}`}>{entry.name}</span>
-                          <span className={`text-sm ${getScoreClasses(rank)} shrink-0`}>{entry.score} pt</span>
+                          <span className={`text-sm tabular-nums ${getScoreClasses(rank)} shrink-0`}>{entry.score} pt</span>
                         </div>
                         {!isLast && <Separator className="bg-champagne/10" />}
                       </li>
@@ -232,7 +219,7 @@ export function RevealDisplay({ state }: { state: GameStateSnapshot }) {
                         <div className="flex items-center gap-3 py-3 px-2">
                           <span className="text-sm text-champagne-dim w-6 text-right shrink-0">#{rank}</span>
                           <span className={`flex-1 text-base truncate ${getRankClasses(rank)}`}>{entry.name}</span>
-                          <span className={`text-sm ${getScoreClasses(rank)} shrink-0`}>{entry.score} pt</span>
+                          <span className={`text-sm tabular-nums ${getScoreClasses(rank)} shrink-0`}>{entry.score} pt</span>
                         </div>
                         {!isLast && <Separator className="bg-champagne/10" />}
                       </motion.li>
